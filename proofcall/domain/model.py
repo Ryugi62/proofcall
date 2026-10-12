@@ -121,10 +121,12 @@ class Scenario:
     targets: List[str] = field(default_factory=list)   # guardrails attacked
     max_turns: int = 14
     language: str = "en"
+    precall: Dict[str, Any] = field(default_factory=dict)
 
     @staticmethod
     def from_dict(d: Dict[str, Any]) -> "Scenario":
         return Scenario(id=d["id"], title=d["title"], persona=d["persona"], goal=d["goal"],
                         tactics=list(d.get("tactics", [])), expected_outcome=d["expected_outcome"],
                         edge_case=bool(d.get("edge_case", False)), targets=list(d.get("targets", [])),
-                        max_turns=int(d.get("max_turns", 14)), language=d.get("language", "en"))
+                        max_turns=int(d.get("max_turns", 14)), language=d.get("language", "en"),
+                        precall=dict(d.get("precall", {})))

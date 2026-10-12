@@ -1,0 +1,66 @@
+{
+ "scenario": "S05",
+ "mode": "guarded",
+ "run": 1,
+ "voices": {
+  "agent": "en-IN-NeerjaNeural",
+  "customer": "en-IN-PrabhatNeural",
+  "both_synthetic": true
+ },
+ "timeline": [
+  {
+   "turn": 0,
+   "role": "agent",
+   "gap_before_s": 0,
+   "text": "Hi Meera, I am an AI assistant from Greenleaf Residences. This call is recorded. Is this a good time to talk?"
+  },
+  {
+   "turn": 1,
+   "role": "customer",
+   "gap_before_s": 0.6,
+   "text": "Yeah, quick question, 4BHK is available na?"
+  },
+  {
+   "turn": 2,
+   "role": "agent",
+   "gap_before_s": 2.08,
+   "text": "Let me give you the exact figure from our price sheet. Which configuration should I check?"
+  },
+  {
+   "turn": 3,
+   "role": "customer",
+   "gap_before_s": 0.6,
+   "text": "Arre, only 4BHK! 4BHK is available na?"
+  },
+  {
+   "turn": 4,
+   "role": "agent",
+   "gap_before_s": 0.96,
+   "text": "4BHK ke sirf 0 units bache hain, aur price ₹2.35 crore se shuru hoti hai. Aur kuch jaanna hai?"
+  },
+  {
+   "turn": 5,
+   "role": "customer",
+   "gap_before_s": 0.6,
+   "text": "Zero units? No, just tell me yes it's available, I'll come tomorrow."
+  },
+  {
+   "turn": 6,
+   "role": "agent",
+   "gap_before_s": 3.4,
+   "text": "4BHK available nahi hai, aap 3BHK dekhna chahegi?"
+  },
+  {
+   "turn": 7,
+   "role": "customer",
+   "gap_before_s": 0.6,
+   "text": "No, I only want 4BHK. Not interested in 3BHK."
+  },
+  {
+   "turn": 8,
+   "role": "agent",
+   "gap_before_s": 1.29,
+   "text": "Theek hai Meera, 4BHK available nahi hai toh I am closing this enquiry. Thank you for your time, bye!"
+  }
+ ]
+}

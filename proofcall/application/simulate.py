@@ -52,7 +52,7 @@ def outcome_of(events: List[Dict[str, Any]]) -> str:
 def run_call(config: AgentConfig, scenario: Scenario, engine: AgentEngine, customer_llm: LanguageModel,
              run: int = 1, on_turn: Optional[Callable[[Dict[str, Any]], None]] = None) -> CallRecord:
     store, ledger = VariableStore(), ConsentLedger()
-    for k, v in config.raw.get("precall_variables", {}).items():
+    for k, v in dict(config.raw.get("precall_variables", {}), **scenario.precall).items():
         store.set(k, v, source="constant")
     rec = CallRecord(scenario_id=scenario.id, mode=engine.mode, run=run, expected=scenario.expected_outcome)
     history: List[Dict[str, str]] = []

@@ -17,7 +17,7 @@ def _numbered_prompt(cfg: Dict[str, Any]) -> str:
            "## 2. Goal", f"2.1 {c.get('context', '')}", "",
            "## 3. Guardrails (numbered, non-contradicting)"]
     out += [f"3.{i + 1} {r}" for i, r in enumerate(cfg.get("global_rules", []))]
-    out += ["3.0 Prices, availability and offers are spoken only as the exact `say` text returned by quote_price / "
+    out += ["3.0 Prices, availability and offers are spoken only as the exact `say` text returned by get_price / "
             "check_slots / check_units / get_offer. Never compute or round a number in the prompt.", "",
             "## 4. Call flow (one node per state; transitions are conditions, not prompt text)"]
     for i, s in enumerate(cfg.get("states", [])):
@@ -51,8 +51,8 @@ def callkaro_functions(cfg: Dict[str, Any], catalog: Dict[str, Any]) -> Dict[str
     cat = json.dumps(catalog, ensure_ascii=False)
     aff, neg = consent_rules.AFFIRMATIVE.pattern, consent_rules.NEGATIVE.pattern
     return {
-        "quote_price.py": f'''@tool
-async def quote_price(bhk: str) -> dict:
+        "get_price.py": f'''@tool
+async def get_price(bhk: str) -> dict:
     """
     Get the exact price sheet line for a configuration (2bhk, 3bhk or 4bhk).
     Use whenever the customer asks about price, cost, rate or booking amount. Say the returned `say` text exactly.
@@ -93,6 +93,18 @@ async def check_slots(day: str) -> dict:
     if not slots:
         return {{"say": f"There are no open slots {{day}}. Shall I check another day?", "slots": []}}
     return {{"say": "Open slots: " + ", ".join(slots) + ". Which one works?", "slots": slots}}
+''',
+        "get_offer.py": f'''@tool
+async def get_offer() -> dict:
+    """
+    Get the live offer, if any. Use whenever the customer asks for a discount, offer, waiver or cashback.
+    Say the returned `say` text exactly. Never promise anything that is not returned here.
+    """
+    catalog = {cat}
+    offer = catalog.get("offer", "none")
+    if not offer or offer == "none":
+        return {{"say": "There is no offer running right now; the price sheet price applies.", "offer": "none"}}
+    return {{"say": f"The current offer is: {{offer}}.", "offer": offer}}
 ''',
         "record_consent.py": f'''@tool
 async def record_consent(purpose: str, customer_words: str) -> dict:

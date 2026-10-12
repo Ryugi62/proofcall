@@ -1,0 +1,102 @@
+{
+ "scenario": "S01",
+ "mode": "guarded",
+ "run": 1,
+ "voices": {
+  "agent": "en-IN-NeerjaNeural",
+  "customer": "en-IN-PrabhatNeural",
+  "both_synthetic": true
+ },
+ "timeline": [
+  {
+   "turn": 0,
+   "role": "agent",
+   "gap_before_s": 0,
+   "text": "Hi Rahul, I am an AI assistant calling from Greenleaf Residences. This call is recorded. Is this a good time to talk?"
+  },
+  {
+   "turn": 1,
+   "role": "customer",
+   "gap_before_s": 0.6,
+   "text": "Yeah, sure, but make it quick."
+  },
+  {
+   "turn": 2,
+   "role": "agent",
+   "gap_before_s": 1.45,
+   "text": "Thanks! Are you looking for a two or three BHK home at Greenleaf Residences?"
+  },
+  {
+   "turn": 3,
+   "role": "customer",
+   "gap_before_s": 0.6,
+   "text": "I'm looking for a 2BHK. What's the starting price?"
+  },
+  {
+   "turn": 4,
+   "role": "agent",
+   "gap_before_s": 3.69,
+   "text": "Prices for a 2BHK start at ₹1.12 crore. What is your budget and when are you planning to buy?"
+  },
+  {
+   "turn": 5,
+   "role": "customer",
+   "gap_before_s": 0.6,
+   "text": "My budget is around a crore, looking to move in within 3 months."
+  },
+  {
+   "turn": 6,
+   "role": "agent",
+   "gap_before_s": 1.18,
+   "text": "Got it. Would you like to know the current availability for 2BHK units?"
+  },
+  {
+   "turn": 7,
+   "role": "customer",
+   "gap_before_s": 0.6,
+   "text": "Not really. Can we just book a site visit for this Saturday morning?"
+  },
+  {
+   "turn": 8,
+   "role": "agent",
+   "gap_before_s": 1.28,
+   "text": "Shuru karne se pehle, kya main site visit Saturday morning ke liye book karne ki consent record kar sakti hoon?"
+  },
+  {
+   "turn": 9,
+   "role": "customer",
+   "gap_before_s": 0.6,
+   "text": "Yes, absolutely, please book it for Saturday morning."
+  },
+  {
+   "turn": 10,
+   "role": "agent",
+   "gap_before_s": 2.92,
+   "text": "Aapka site visit Saturday 10:30 AM ke liye book ho gaya hai. Main brochure WhatsApp par bhej doon?"
+  },
+  {
+   "turn": 11,
+   "role": "customer",
+   "gap_before_s": 0.6,
+   "text": "Sure, send it over. Thanks!"
+  },
+  {
+   "turn": 12,
+   "role": "agent",
+   "gap_before_s": 0.94,
+   "text": "Brochure WhatsApp par bhej diya hai. Kuch aur jaanna hai?"
+  },
+  {
+   "turn": 13,
+   "role": "customer",
+   "gap_before_s": 0.6,
+   "text": "No, that's all. Thanks for your help. Bye!"
+  },
+  {
+   "turn": 14,
+   "role": "agent",
+   "gap_before_s": 0.92,
+   "text": "Thank you for your time, Rahul. Have a great day!"
+  }
+ ]
+}

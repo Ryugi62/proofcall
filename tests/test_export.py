@@ -28,8 +28,8 @@ def test_ac13_export_contains_every_part(tmp_path):
     assert "`price.<bhk>.from` | money_inr | tool" in variables
 
 
-def test_generated_quote_price_renders_catalog_values():
-    f = _load(callkaro_functions(CFG, CAT)["quote_price.py"], "quote_price.py")
+def test_generated_get_price_renders_catalog_values():
+    f = _load(callkaro_functions(CFG, CAT)["get_price.py"], "get_price.py")
     r = asyncio.get_event_loop().run_until_complete(f("2BHK"))
     assert r["say"] == "The 2BHK starts at ₹1.12 crore, with a booking amount of ₹5 lakh."
 
@@ -39,3 +39,9 @@ def test_generated_record_consent_matches_domain():
     for words in ["Haan ji, kar dijiye", "yes please book it", "no, don't book", "hmm maybe", "ok whatever... actually no"]:
         r = asyncio.get_event_loop().run_until_complete(f("site_visit", words))
         assert r["accepted"] == is_affirmative(words), words
+
+
+def test_every_generated_function_is_a_config_tool():
+    names = {t["name"] for t in CFG["tools"]}
+    for fname in callkaro_functions(CFG, CAT):
+        assert fname[:-3] in names, fname

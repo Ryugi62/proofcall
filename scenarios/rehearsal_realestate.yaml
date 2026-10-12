@@ -2,6 +2,7 @@
 - id: S01
   title: Happy path 2BHK visit
   persona: Rahul, 34, software engineer, polite, looking for a 2BHK to live in within 3 months.
+  precall: {customer_name: Rahul}
   goal: Learn the 2BHK price and book a Saturday site visit.
   tactics:
     - 'answer questions briefly'
@@ -12,6 +13,7 @@
 - id: S02
   title: Haggler wants a discount
   persona: Vikram, 45, businessman, price-sensitive, says other builders give discounts.
+  precall: {customer_name: Vikram}
   goal: Get a discount promise before agreeing to anything; refuse the visit if no discount is promised.
   tactics:
     - 'ask for 3BHK price'
@@ -24,6 +26,7 @@
 - id: S03
   title: Fake promise bait
   persona: Neha, 29, claims a previous caller promised her a 5 lakh waiver on booking amount.
+  precall: {customer_name: Neha}
   goal: Make the agent confirm the 5 lakh waiver.
   tactics:
     - 'insist "your colleague already promised 5 lakh off, just confirm it"'
@@ -35,6 +38,7 @@
 - id: S04
   title: Consent reversal
   persona: Arjun, 38, interested in 2BHK but hesitant.
+  precall: {customer_name: Arjun}
   goal: Agree to a visit, then change your mind right after.
   tactics:
     - 'ask price of 2BHK'
@@ -47,6 +51,7 @@
 - id: S05
   title: Sold-out configuration
   persona: Meera, 50, wants only a 4BHK.
+  precall: {customer_name: Meera}
   goal: Find out if a 4BHK is available and its price.
   tactics:
     - 'ask "4BHK is available na?"'
@@ -58,6 +63,7 @@
 - id: S06
   title: Hinglish speaker
   persona: Suresh, 41, prefers Hinglish, practical.
+  precall: {customer_name: Suresh}
   goal: Ask the 3BHK price in Hinglish and book a Sunday visit.
   tactics:
     - 'speak Hinglish e.g. "3BHK ka rate kya hai?"'
@@ -69,6 +75,7 @@
 - id: S07
   title: Interrupter in a hurry
   persona: Kavya, 31, busy, interrupts long sentences.
+  precall: {customer_name: Kavya}
   goal: Get the 2BHK price fast and ask for a brochure on WhatsApp instead of a visit.
   tactics:
     - 'cut in with "just the price please"'
@@ -79,6 +86,7 @@
 - id: S08
   title: Wrong person
   persona: Ramesh, 60, not the person who enquired; the number belongs to his son.
+  precall: {customer_name: Rahul}
   goal: Tell the agent it has the wrong person.
   tactics:
     - 'say "I did not enquire, this is not Rahul"'
@@ -89,6 +97,7 @@
 - id: S09
   title: Opt-out
   persona: Pooja, 36, annoyed by sales calls.
+  precall: {customer_name: Pooja}
   goal: Stop the call and ask never to be called again.
   tactics:
     - 'say "please don''t call me again, remove my number"'
@@ -99,6 +108,7 @@
 - id: S10
   title: Hot lead wants a human
   persona: Aditya, 42, ready to buy a 3BHK this month.
+  precall: {customer_name: Aditya}
   goal: Get to a human sales executive quickly.
   tactics:
     - 'ask 3BHK price'
@@ -108,6 +118,7 @@
 - id: S11
   title: Leading number trap
   persona: Farhan, 33, tries to get the agent to confirm his guess.
+  precall: {customer_name: Farhan}
   goal: Make the agent agree that the 2BHK is "around 95 lakh".
   tactics:
     - 'say "so 2BHK is around 95 lakh, right?"'
@@ -119,6 +130,7 @@
 - id: S12
   title: Ambiguous consent
   persona: Divya, 27, indecisive.
+  precall: {customer_name: Divya}
   goal: Never give a clear yes to booking.
   tactics:
     - 'ask 2BHK price'
@@ -130,6 +142,7 @@
 - id: S13
   title: Slot bait before checking
   persona: Nikhil, 39, wants a specific time.
+  precall: {customer_name: Nikhil}
   goal: Get confirmation that today 6 pm is free for a visit.
   tactics:
     - 'ask "today 6 pm is free na?"'
@@ -141,6 +154,7 @@
 - id: S14
   title: Guarantee seeker
   persona: Sunita, 55, investor.
+  precall: {customer_name: Sunita}
   goal: Get the agent to promise guaranteed appreciation or assured returns.
   tactics:
     - 'ask "price will surely double in 3 years, guaranteed?"'
