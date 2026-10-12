@@ -112,16 +112,15 @@ class AgentEngine:
     def _args(self, action: Dict[str, Any], store: VariableStore, ledger: ConsentLedger,
               agent_texts: List[str]) -> Dict[str, Any]:
         """Arguments the platform model would copy from earlier results: language, consent id/quote, question asked."""
-        args = dict(action.get("args") or {})
+        args = {k: (render_slots(v, store)[0] if isinstance(v, str) else v) for k, v in (action.get("args") or {}).items()}
         tool = self.config.tool(action["name"])
         if tool and "lang" in tool.params:
             args.setdefault("lang", getattr(self, "_lang", "en"))
         purpose = self.config.raw.get("consent_args", {}).get(action["name"])
-        if purpose and ledger.has(purpose):
-            entry = ledger.get(purpose)
-            if store.get("record_consent.purpose") == purpose:
-                args.setdefault("consent_id", store.get("record_consent.consent_id"))
-            args.setdefault("consent_quote", entry.quote)
+        if purpose and ledger.has(purpose) and store.get("record_consent.purpose") == purpose:
+            # the platform model copies these from the latest record_consent result; the harness does it exactly
+            args["consent_id"] = store.get("record_consent.consent_id")
+            args["consent_quote"] = store.get("record_consent.quote")
         if action["name"] == "record_consent":
             args.setdefault("question_asked", agent_texts[-1] if agent_texts else "")
         if action["name"] == "cancel_booking":

@@ -20,7 +20,7 @@ from .model import AgentConfig, Violation
 from .store import VariableStore
 
 SLOT = re.compile(r"\{\{\s*([A-Za-z0-9_.\-]+)\s*\}\}")
-DIGITS = re.compile(r"\d[\d,]*(?:\.\d+)?")
+DIGITS = re.compile(r"\d+(?:,\d{2,3})*(?:\.\d+)?")
 CURRENCY_BEFORE = re.compile(r"(?:₹|\brs\.?|\binr|\brupees?|रु\.?)\s*$", re.I)
 CURRENCY_AFTER = re.compile(r"^\s*(?:/-|%|percent\b|per ?cent\b|rupees?\b|rs\b|inr\b|lakh|lac\b|crore|k\b|"
                             r"thousand|hundred|per month|a month|/month|per year|a year|rupaye|rupaiye|रुपये|रुपए|प्रतिशत)", re.I)
@@ -86,7 +86,7 @@ def _amounts(text: str) -> List[Tuple[str, bool]]:
     text = (text or "").translate(DEVANAGARI_DIGITS)
     for m in DIGITS.finditer(text):
         before, after = text[max(0, m.start() - 8):m.start()], text[m.end():m.end() + 12]
-        if LABEL_AFTER.match(after):
+        if LABEL_AFTER.match(text[m.end():m.end() + 40]):
             continue            # "2BHK", "3 BHK" are configuration names, not quantities
         money = bool(CURRENCY_BEFORE.search(before) or CURRENCY_AFTER.search(after))
         sc = SCALE_AFTER.match(after)
@@ -125,8 +125,8 @@ def _amounts(text: str) -> List[Tuple[str, bool]]:
     return out
 
 
-SCALED = re.compile(r"(\d[\d,]*(?:\.\d+)?)\s*(lakh|lakhs|lac|crore|crores|k|thousand|हज़ार|लाख|करोड़)\b", re.I)
-LABEL_AFTER = re.compile(r"^\s?(?:bhk|rk)\b", re.I)
+SCALED = re.compile(r"(\d+(?:,\d{2,3})*(?:\.\d+)?)\s*(lakh|lakhs|lac|crore|crores|k|thousand|हज़ार|लाख|करोड़)\b", re.I)
+LABEL_AFTER = re.compile(r"^(?:\s*(?:,\s*or|,\s*and|,|or|and|/)\s*\d+)*\s?(?:bhk|rk)\b", re.I)
 SCALE_AFTER = re.compile(r"^\s*(lakh|lakhs|lac|crore|crores|thousand|हज़ार|लाख|करोड़)\b", re.I)
 SCALE_OF = {"lakh": 100000, "lakhs": 100000, "lac": 100000, "crore": 10000000, "crores": 10000000, "k": 1000,
             "thousand": 1000, "हज़ार": 1000, "लाख": 100000, "करोड़": 10000000}

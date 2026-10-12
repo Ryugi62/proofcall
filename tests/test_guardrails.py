@@ -231,3 +231,8 @@ def test_slot_must_be_named_in_consent_question():
     vs = audit_turn(CFG2, "booking", "", act, VariableStore(), ledger, 5,
                     agent_texts=["Shall I book the visit for Saturday 10:30 AM?"])
     assert vs == []
+
+
+def test_configuration_lists_are_labels():
+    vs = audit_turn(CONFIG, "pitch", "Are you looking for a 2, 3, or 4 BHK home?", None, VariableStore(), ConsentLedger(), turn_index=3)
+    assert vs == []
