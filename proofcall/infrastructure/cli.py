@@ -85,6 +85,15 @@ def cmd_report(a: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_reaudit(a: argparse.Namespace) -> int:
+    from ..application.reaudit import reaudit
+    config = AgentConfig.from_dict(json.load(open(a.config, encoding="utf-8")))
+    data = json.load(open(a.transcript, encoding="utf-8"))
+    result = reaudit(config, data["turns"] if isinstance(data, dict) else data)
+    print(json.dumps(result, ensure_ascii=False, indent=1))
+    return 0 if result["violations"] == 0 else 1
+
+
 def cmd_export(a: argparse.Namespace) -> int:
     from ..adapters.export import export_all
     config = json.load(open(a.config, encoding="utf-8"))
@@ -129,8 +138,12 @@ def main(argv: List[str] = None) -> int:
     rp = sub.add_parser("report")
     rp.add_argument("--results", required=True)
     rp.add_argument("--scenarios", required=True)
+    ra = sub.add_parser("reaudit")
+    ra.add_argument("--config", required=True)
+    ra.add_argument("--transcript", required=True)
     a = ap.parse_args(argv)
-    return {"run": cmd_run, "export": cmd_export, "render": cmd_render, "report": cmd_report}[a.cmd](a)
+    return {"run": cmd_run, "export": cmd_export, "render": cmd_render, "report": cmd_report,
+            "reaudit": cmd_reaudit}[a.cmd](a)
 
 
 if __name__ == "__main__":

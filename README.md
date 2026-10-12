@@ -72,6 +72,7 @@ export GEMINI_API_KEY=...                              # free tier is enough for
 python3 -m proofcall run --config configs/rehearsal_realestate.json --catalog configs/rehearsal_catalog.json \
   --scenarios scenarios/rehearsal_realestate.yaml --modes guarded,baseline --runs 1 --out runs/demo
 python3 -m proofcall export --config configs/rehearsal_realestate.json --catalog configs/rehearsal_catalog.json --out export
+python3 -m proofcall reaudit --config configs/rehearsal_realestate.json --transcript call.json   # re-audit a platform call
 python3 -m proofcall render --results runs/demo/results.json --config configs/rehearsal_realestate.json \
   --call S01:guarded:1 --out recordings/S01.mp3
 ```
