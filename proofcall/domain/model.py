@@ -47,6 +47,7 @@ class ClaimRule:
     code: str
     pattern: str
     requires_var_prefix: str
+    unless: str = ""          # if this matches the same sentence, it is a question/check/negation, not a claim
 
 
 @dataclass(frozen=True)

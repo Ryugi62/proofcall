@@ -49,17 +49,19 @@
   "\\bbest price\\b",
   "\\blowest price\\b",
   "\\bpakka\\b",
-  "\\bconsent\\b"
+  "\\bconsent\\b",
+  "पक्का"
  ],
  "claim_rules": [
   {
    "code": "AVAILABILITY_UNVERIFIED",
-   "pattern": "\\b(?:is|are) (?:still )?(?:available|free|open)\\b|\\bwe have (?:a |some )?(?:units?|flats?|slots?)\\b|\\b(?:fully|already) booked\\b|\\bsold out\\b|\\bno (?:units?|slots?) (?:left|available)\\b|\\bavailable (?:hai|hain|nahi|nahin)\\b|\\bkhali hai\\b|\\b(?:free|open|available) hai\\b|उपलब्ध",
-   "requires_var_prefix": "check_units.|check_slots."
+   "pattern": "\\b(?:is|are) (?:still )?(?:available|free|open)\\b|\\bwe have (?:a |some )?(?:units?|flats?|slots?)\\b|\\b(?:fully|already) booked\\b|\\bsold out\\b|\\bno (?:units?|slots?) (?:left|available)\\b|\\bavailable (?:hai|hain|nahi|nahin)\\b|\\bkhali hai\\b|\\b(?:free|open|available) hai\\b|उपलब्ध|\\bwe have\\b[^.?!]{0,20}\\b(?:units?|flats?|homes?|slots?)\\b|\\b(?:units?|flats?|homes?|slots?) (?:are |is )?(?:still )?(?:available|open|left)\\b",
+   "requires_var_prefix": "check_units.|check_slots.",
+   "unless": "\\b(?:let me check|i'?ll check|check(?:ing)?|which|whether|if any|kya)\\b"
   },
   {
    "code": "BOOKING_UNBACKED",
-   "pattern": "\\b(?:i have|i've|is now|has been|successfully|visit is|visit has been)\\s+(?:booked|confirmed|scheduled)\\b|\\b(?:i am|i'm)\\s+(?:booking|confirming|scheduling)\\b|\\bbook ho gaya\\b|\\bbook kar diya\\b|\\bbook kar rahi\\b|\\bbooking kar (?:rahi|raha|di|diya)\\b|\\bbook kar (?:rahi|raha) (?:hoon|hun|hu)\\b",
+   "pattern": "\\b(?:i have|i've|is now|has been|successfully|visit is|visit has been)\\s+(?:booked|confirmed|scheduled)\\b|\\b(?:i am|i'm)\\s+(?:booking|confirming|scheduling)\\b|\\bbook ho gaya\\b|\\bbook kar diya\\b|\\bbook kar rahi\\b|\\bbooking kar (?:rahi|raha|di|diya)\\b|\\bbook kar (?:rahi|raha) (?:hoon|hun|hu)\\b|\\bconfirm ho gaya\\b|\\bbook ho gay[ai]\\b|बुक हो ग|बुक कर दी",
    "requires_var_prefix": "book_site_visit.booking_id"
   },
   {
@@ -69,8 +71,9 @@
   },
   {
    "code": "OFFER_UNVERIFIED",
-   "pattern": "\\b(?:discount|cashback|waiver) (?:of|is|on)\\b|\\b(?:special|festive|limited[- ]period|current) offer\\b|\\boffer (?:is|of)\\b|\\b\\w+ off on\\b|\\b(?:discount|offer|waiver|cashback)\\b.{0,25}\\b(?:running|available|chal raha|mil raha|milega)\\b|\\b\\d+\\s?% (?:\\w+ )?discount\\b",
-   "requires_var_prefix": "get_offer."
+   "pattern": "\\b(?:discount|cashback|waiver|waive[ds]?|offer|free gift)\\b|ऑफ़र|ऑफर|कैशबैक|छूट",
+   "requires_var_prefix": "get_offer.",
+   "unless": "\\b(?:no|not|nahi|nahin|any|is there|koi|let me check|check|we offer)\\b|नहीं|\\?"
   }
  ],
  "consent_gated_actions": {

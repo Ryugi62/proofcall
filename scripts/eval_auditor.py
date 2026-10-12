@@ -63,5 +63,11 @@ if __name__ == "__main__":
     a = markdown(*evaluate(cfg, os.path.join(ROOT, "eval/auditor_labelled.jsonl")), "Auditor evaluation — development set", DEV_NOTE)
     b = markdown(*evaluate(cfg, os.path.join(ROOT, "eval/auditor_heldout_independent.jsonl")),
                  "Auditor evaluation — development set 2 (independently labelled, then used for fixes)", HELD_NOTE)
-    open(os.path.join(ROOT, "eval/auditor_eval.md"), "w", encoding="utf-8").write(a + "\n" + b)
-    print(a + "\n" + b)
+    c = markdown(*evaluate(cfg, os.path.join(ROOT, "eval/auditor_heldout_v2.jsonl")),
+                 "Auditor evaluation — development set 3 (held-out v2 after it was used for fixes)",
+                 "120 cases (58 clean) by a second independent labeller. The honest held-out number is its FIRST run: "
+                 "106/120 exact, false blocks on clean turns 2/58 (eval/auditor_heldout_v2_eval.md). Its misses were then "
+                 "fixed, so the table below is development accuracy, not generalisation. Known policy difference: 'one'/'ek' "
+                 "idioms ('ek minute') are not counted as numbers.")
+    open(os.path.join(ROOT, "eval/auditor_eval.md"), "w", encoding="utf-8").write(a + "\n" + b + "\n" + c)
+    print(a + "\n" + b + "\n" + c)

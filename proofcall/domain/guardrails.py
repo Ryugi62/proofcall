@@ -115,10 +115,10 @@ def _amounts(text: str) -> List[Tuple[str, bool]]:
             has_scale = any(w in SCALES for w in run)
             money = has_scale or nxt in MONEY_WORDS or bool(CURRENCY_BEFORE.search(prev)) or \
                 bool(CURRENCY_AFTER.search(text[toks[j - 1][2]:toks[j - 1][2] + 12]))
-            if money and not (len(run) == 1 and run[0] in SCALES):
+            if not (len(run) == 1 and run[0] in SCALES):
                 val = _words_to_int(run)
-                if val is not None:
-                    out.append((_norm_number(str(val)), True))
+                if val is not None and (money or run not in (["one"], ["ek"])):
+                    out.append((_norm_number(str(val)), money))
             i = j
         else:
             i += 1
@@ -146,6 +146,12 @@ def _numbers_in(values: Iterable[Any]) -> Set[str]:
     return found
 
 
+def _sentence_of(text: str, pos: int) -> str:
+    start = max(text.rfind(c, 0, pos) for c in ".?!।") + 1
+    ends = [i for i in (text.find(c, pos) for c in ".?!।") if i != -1]
+    return text[start:(min(ends) + 1) if ends else len(text)]
+
+
 def render_slots(text: str, store: VariableStore) -> Tuple[str, List[str]]:
     missing: List[str] = []
 
@@ -160,7 +166,8 @@ def render_slots(text: str, store: VariableStore) -> Tuple[str, List[str]]:
 
 
 HINDI_CUSTOMER_EXTRA = {"ji", "bhej", "kariye", "karo", "batao", "bhai", "mujhe", "hoon", "kijiye", "haanji", "acha",
-                        "accha", "nahi", "matlab", "rate", "kitne"}
+                        "accha", "nahi", "matlab", "kitne", "ke", "liye", "rahega", "rahegi", "kaafi", "logon", "hum",
+                        "ko", "se", "wala", "wali", "sakte", "sakti", "sakta", "saal", "mahine", "aur", "lekin", "bahut"}
 HINDI_MARKERS = {"hai", "hain", "aap", "aapka", "aapko", "aapki", "kya", "nahi", "nahin", "kar", "karna", "karein",
                  "chahenge", "chahengi", "chahiye", "toh", "mein", "sirf", "bhi", "haan", "theek", "bataiye", "dijiye",
                  "hoga", "raha", "rahi", "gaya", "diya", "kijiye", "abhi", "kitna", "kab"}
@@ -184,7 +191,7 @@ def audit_turn(config: AgentConfig, state_name: str, spoken: str, action: Option
     text = spoken or ""
     tool_nums = _numbers_in(store.values_from("tool"))
     const_nums = _numbers_in(store.values_from("constant")) | _numbers_in(config.raw.get("allowed_numbers", []))
-    customer_nums = _numbers_in(customer_texts)
+    customer_nums = _numbers_in(customer_texts) | {n for c in customer_texts for n, _ in _amounts(c)}
 
     for num, money in _amounts(text):
         if num in tool_nums:
@@ -196,6 +203,8 @@ def audit_turn(config: AgentConfig, state_name: str, spoken: str, action: Option
 
     for rule in config.claim_rules:
         m = re.search(rule.pattern, text, re.I)
+        if m and rule.unless and re.search(rule.unless, _sentence_of(text, m.start()), re.I):
+            continue
         if m and not any(store.has_prefix(px) for px in rule.requires_var_prefix.split("|")):
             vs.append(Violation(rule.code, f"claim '{m.group(0)}' before any {rule.requires_var_prefix}* tool result"))
 

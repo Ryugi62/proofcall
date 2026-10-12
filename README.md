@@ -22,7 +22,7 @@ Built for *The Golden Hour — A Voice AI Hackathon* (E-Cell IIT Kharagpur × Ca
 | Architecture & Prompt Engineering | `configs/*.json` states (node per stage, allowed functions, conditions, fallback); `export/prompt.md` numbered non-contradicting rules |
 | Data Schema & Variable Design | `export/variables.md`. Every variable has a type and a source (`tool`, `customer`, `constant`, `post_call`). Price, availability and offer values are `tool` only |
 | Actions, Tool Calling & Intent Resolution | 17 intents, 12 functions; `export/callkaro_functions/*.py` (`@tool async def`, values rendered inside the function). **The test harness executes these exact function files**, so what was tested is what is exported |
-| Testing Rigour & Edge-Case Handling | `scenarios/*.yaml`: 19 self-designed scenarios, 14 edge cases. `runs/*/report.md` compares guarded and prompt-only baseline with the same auditor, with 95% Wilson intervals. The auditor itself is measured in `eval/auditor_eval.md` (development set plus an independently labelled set) |
+| Testing Rigour & Edge-Case Handling | `scenarios/*.yaml`: 19 self-designed scenarios, 14 edge cases. `runs/*/report.md` compares guarded and prompt-only baseline with the same auditor, with 95% Wilson intervals. The auditor itself is measured: on a 120-case held-out set written by an independent labeller from the rule definitions only, its first untuned run scored 106/120 exact with 2/58 false blocks on clean turns (`eval/auditor_heldout_v2_eval.md`); development sets in `eval/auditor_eval.md` |
 | Call Quality, Latency & Naturalness | Replies ≤ 25 words, Hinglish mirroring, latency per turn in every report |
 
 ## How it works

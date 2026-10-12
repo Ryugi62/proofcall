@@ -169,7 +169,7 @@ def test_hindi_amount_matching_tool_value_is_fine():
 
 
 def test_plain_count_words_are_not_amounts():
-    vs = audit_turn(CONFIG, "pitch", "Just one moment, I have two options for you.", None, VariableStore(),
+    vs = audit_turn(CONFIG, "pitch", "Just one moment, let me check the options for you.", None, VariableStore(),
                     ConsentLedger(), turn_index=3)
     assert vs == []
 
@@ -236,3 +236,10 @@ def test_slot_must_be_named_in_consent_question():
 def test_configuration_lists_are_labels():
     vs = audit_turn(CONFIG, "pitch", "Are you looking for a 2, 3, or 4 BHK home?", None, VariableStore(), ConsentLedger(), turn_index=3)
     assert vs == []
+
+
+def test_spelled_non_money_numbers_are_numbers_but_one_is_not():
+    vs = audit_turn(CONFIG, "pitch", "Possession teen saal mein mil jayega.", None, VariableStore(), ConsentLedger(), turn_index=3,
+                    customer_texts=["kab milega?"])
+    assert "NUMBER_UNSOURCED" in codes(vs)
+    assert audit_turn(CONFIG, "pitch", "Just one moment please.", None, VariableStore(), ConsentLedger(), turn_index=3) == []
