@@ -1,0 +1,42 @@
+  [S04 guarded r1] AGENT: Hi Arjun, I am an AI assistant from Greenleaf Residences. This call is recorded. Is this a good time to talk?
+  [S04 guarded r1] CUST : Yeah, quick question, how much is a 2BHK there?
+  [S04 guarded r1] AGENT: The 2BHK starts at ₹1.12 crore, excluding GST and stamp duty, with a booking amount of ₹5 lakh. Yes, 2BHK homes are available right now.
+  [S04 guarded r1] CUST : Hmm, a bit pricey. But okay, yes book Saturday.
+  [S04 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S04 guarded r1] CUST : Wait, cancel that, don't book anything. Not sure yet.
+  [S04 guarded r1] AGENT: No problem at all, Arjun. Would you like me to send the brochure on WhatsApp instead?
+  [S04 guarded r1] CUST : Yeah sure, send it over. Thanks, bye.
+  [S04 guarded r1] AGENT: I've sent the brochure to your WhatsApp. Thanks for your time, bye!
+== S04 guarded r1: outcome=brochure_sent expected=declined violations=0 blocked=1 error=
+  [S17 guarded r1] AGENT: Hi Ramesh, I'm an AI assistant from Greenleaf Residences. This call is recorded. Is this a good time to talk?
+  [S17 guarded r1] CUST : हाँ, बोलिए।
+  [S17 guarded r1] AGENT: Namaste! Are you looking for a two, three, or four BHK apartment at Greenleaf Residences?
+  [S17 guarded r1] CUST : 2BHK का रेट क्या है?
+  [S17 guarded r1] AGENT: The 2BHK starts at ₹1.12 crore, excluding GST and stamp duty, with a booking amount of ₹5 lakh. What is your budget?
+  [S17 guarded r1] CUST : बजट ठीक है, मैं रविवार को देखने आ सकता हूँ।
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : सुबह दस बजे का टाइम कर दीजिए।
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : हाँ, दस बजे कर दीजिए।
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : हाँ, दस बजे ठीक है। रविवार को मिलते हैं।
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : अरे भाई, दस बजे बोल दिया ना! रविवार को मिलते हैं।
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : हाँ, दस बजे पक्का समझो।
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : ठीक है, दस बजे बुक कर दीजिए।
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : हाँ, कर दीजिए, दस बजे पक्का।
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : हाँ, दस बजे कर दीजिए, और क्या बताऊँ?
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : हाँ, दस बजे बुक कर दीजिए।
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : हाँ, दस बजे कर दीजिए भाई।
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : हाँ, दस बजे कर दीजिए।
+  [S17 guarded r1] AGENT: Before I book anything, which time should I check for you? BLOCKED
+  [S17 guarded r1] CUST : हाँ, दस बजे कर दीजिए।
+== S17 guarded r1: outcome=declined expected=booked violations=0 blocked=12 error=
+LLM calls: agent=25 customer=19

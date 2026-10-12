@@ -6,13 +6,22 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 AFFIRMATIVE = re.compile(
-    r"\b(yes|yeah|yep|sure|okay|ok|go ahead|please do|do it|book it|sounds good|fine|alright|"
-    r"haan|haanji|han|ji haan|theek hai|thik hai|kar dijiye|kar do|chalega|bilkul)\b", re.I)
+    r"\b(yes|yeah|yep|sure|okay|ok|go ahead|please do|do it|book it|send it|sounds good|fine|alright|no problem|"
+    r"haan|haanji|han|ji haan|theek hai|thik hai|kar dijiye|kar do|bhej do|chalega|bilkul)\b|हाँ|हां|जी हाँ|ठीक है|कर दीजिए", re.I)
+# Phrase-level negation is checked first; "no problem" and "don't worry" are not negations.
 NEGATIVE = re.compile(
-    r"\b(no|nope|not now|don'?t|do not|nahi|nahin|mat|never|stop|wait)\b", re.I)
+    r"\b(no(?! problem)|nope|not|don'?t(?! worry)|do not|nahi|nahin|mat|never|stop|wait|cancel|maybe|later)\b"
+    r"|नहीं|मत|रुकिए", re.I)
 REVOCATION = re.compile(
     r"\b(cancel|don'?t (?:book|send|want)|do not (?:book|send|call)|i changed my mind|remove my|stop calling|"
-    r"take back|withdraw|mat (?:karo|kijiye)|nahi chahiye|cancel kar)\b", re.I)
+    r"take back|withdraw|mat (?:karo|kijiye)|nahi chahiye|cancel kar)\b|रद्द|मत कीजिए|नहीं चाहिए", re.I)
+OPT_OUT = re.compile(
+    r"\b(don'?t call (?:me )?again|stop calling|remove my (?:number|name)|do not call|never call|"
+    r"call mat karna|dobara call mat)\b|दोबारा कॉल मत", re.I)
+
+
+def detect_opt_out(text: str) -> bool:
+    return bool(OPT_OUT.search(text or ""))
 
 
 def _contains(haystack: str, needle: str) -> bool:

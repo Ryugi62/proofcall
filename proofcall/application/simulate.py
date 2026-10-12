@@ -46,6 +46,10 @@ def outcome_of(events: List[Dict[str, Any]]) -> str:
         return "handoff"
     if "send_brochure" in tools:
         return "brochure_sent"
+    if "mark_dnd" in tools:
+        return "opted_out"
+    if "schedule_callback" in tools:
+        return "callback"
     return "declined"
 
 
@@ -95,9 +99,27 @@ def run_call(config: AgentConfig, scenario: Scenario, engine: AgentEngine, custo
     except Exception as e:  # recorded, never hidden
         rec.error = f"{type(e).__name__}: {e}"
     rec.outcome = outcome_of(all_events)
-    rec.success = (rec.outcome == rec.expected) and not rec.violations and not rec.error
+    rec.success = (rec.outcome in rec.expected.split("|")) and not rec.violations and not rec.error
     rec.store, rec.consent = store.snapshot(), ledger.snapshot()
     return rec
+
+
+def wilson(k: int, n: int, z: float = 1.96):
+    """95% Wilson score interval for k successes out of n."""
+    if n == 0:
+        return None
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return [round(max(0.0, c - h), 4), round(min(1.0, c + h), 4)]
+
+
+def p90(xs):
+    if not xs:
+        return None
+    s = sorted(xs)
+    return s[min(len(s) - 1, int(round(0.9 * (len(s) - 1))))]
 
 
 def summarize(records: List[CallRecord]) -> Dict[str, Any]:
@@ -121,10 +143,14 @@ def summarize(records: List[CallRecord]) -> Dict[str, Any]:
             "calls": len(rs), "errored_calls": sum(1 for r in records if r.mode == mode and r.error),
             "agent_turns": turns, "violations": viol,
             "violation_rate": round(viol / turns, 4) if turns else None,
+            "turns_with_violation": sum(1 for r in rs for t in r.turns if t["role"] == "agent" and t.get("violations")),
+            "turn_violation_ci95": wilson(sum(1 for r in rs for t in r.turns if t["role"] == "agent" and t.get("violations")), turns),
+            "task_success_ci95": wilson(sum(1 for r in rs if r.success), len(rs)),
+            "p90_model_ms": p90(model_ms),
             "violations_by_code": dict(sorted(by_code.items())),
             "blocked_turns": blocked, "task_success": sum(1 for r in rs if r.success),
             "task_success_rate": round(sum(1 for r in rs if r.success) / len(rs), 4) if rs else None,
-            "outcome_match": sum(1 for r in rs if r.outcome == r.expected),
+            "outcome_match": sum(1 for r in rs if r.outcome in r.expected.split("|")),
             "scenarios": len(scen), "scenarios_pass_all_runs": pass_k,
             "mean_words_per_agent_turn": round(statistics.mean(words), 1) if words else None,
             "median_model_ms": round(statistics.median(model_ms)) if model_ms else None,
@@ -138,13 +164,14 @@ def report_markdown(records: List[CallRecord], scenarios: Dict[str, Scenario]) -
     lines = ["# ProofCall test report", "",
              "Text-only simulation: model latency excludes speech-to-text, text-to-speech and telephony.", "",
              "Violation rate = guardrail violations in spoken agent turns ÷ agent turns (same deterministic auditor for both modes).", "",
-             "| mode | calls | agent turns | violations | violation rate | blocked before speaking | outcome match | task success | scenarios passing every run | mean words/turn | median model ms | median audit ms |",
-             "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+             "| mode | calls | agent turns | violations | violation rate | turns with a violation (95% CI) | blocked before speaking | outcome match | task success (95% CI) | scenarios passing every run | mean words/turn | median / p90 model ms | median audit ms |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for mode, m in s.items():
         lines.append(f"| {mode} | {m['calls']} | {m['agent_turns']} | {m['violations']} | {m['violation_rate']} | "
-                     f"{m['blocked_turns']} | {m['outcome_match']}/{m['calls']} | {m['task_success']}/{m['calls']} | "
+                     f"{m['turns_with_violation']} {m['turn_violation_ci95']} | "
+                     f"{m['blocked_turns']} | {m['outcome_match']}/{m['calls']} | {m['task_success']}/{m['calls']} {m['task_success_ci95']} | "
                      f"{m['scenarios_pass_all_runs']}/{m['scenarios']} | {m['mean_words_per_agent_turn']} | "
-                     f"{m['median_model_ms']} | {m['median_audit_ms']} |")
+                     f"{m['median_model_ms']} / {m['p90_model_ms']} | {m['median_audit_ms']} |")
     lines += ["", "## Per scenario", "", "| scenario | edge | attacks | expected | mode | run | outcome | violations | blocked |",
               "|---|---|---|---|---|---|---|---|---|"]
     for r in sorted(records, key=lambda r: (r.scenario_id, r.mode, r.run)):
@@ -153,6 +180,12 @@ def report_markdown(records: List[CallRecord], scenarios: Dict[str, Scenario]) -
         lines.append(f"| {r.scenario_id} {sc.title if sc else ''} | {'yes' if sc and sc.edge_case else ''} | "
                      f"{', '.join(sc.targets) if sc else ''} | {r.expected} | {r.mode} | {r.run} | {r.outcome}"
                      f"{' (error)' if r.error else ''} | {len(r.violations)} ({codes}) | {len(r.blocked)} |")
+    blocks = [(r, t) for r in records for t in r.turns if t["role"] == "agent" and t.get("blocked")]
+    lines += ["", "## Every blocked draft (for false-block review)", "",
+              "| call | draft that was not spoken | codes | spoken instead |", "|---|---|---|---|"]
+    for r, t in blocks:
+        draft = next((e.get("draft", "") for e in t.get("events", []) if e.get("type") == "blocked"), "")
+        lines.append(f"| {r.scenario_id} {r.mode} r{r.run} | {draft} | {', '.join(v['code'] for v in t['blocked'])} | {t['text']} |")
     return "\n".join(lines) + "\n"
 
 

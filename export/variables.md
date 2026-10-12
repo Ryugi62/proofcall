@@ -5,20 +5,26 @@ Source `tool` = may only be filled by a function result. Source `customer` = cap
 | variable | type | source | required | validation / meaning |
 |---|---|---|---|---|
 | `customer_name` | string | constant | yes | Pre-call lead name |
-| `lead_source` | string | constant |  | Where the enquiry came from |
-| `lead.bhk` | enum[2bhk,3bhk,4bhk] | customer |  | Configuration asked |
-| `lead.budget` | string | customer |  | Budget in customer's words |
+| `lead_source` | string | constant | yes | Where the enquiry came from |
+| `lead.language` | enum[en,hinglish,hi] | customer | yes | Language the customer speaks; agent mirrors it |
+| `lead.bhk` | enum[2bhk,3bhk,4bhk] | customer | yes | Configuration asked |
+| `lead.budget_inr` | integer | customer |  | Budget normalised to rupees (post-call extraction) |
 | `lead.timeline` | enum[0-3m,3-6m,6m+,unknown] | customer |  |  |
-| `price.<bhk>.from` | money_inr | tool |  | Starting price, set by get_price |
-| `price.<bhk>.booking_amount` | money_inr | tool |  | Booking amount, set by get_price |
-| `availability.units.<bhk>` | integer | tool |  | Units left, set by check_units |
-| `availability.slots` | list[datetime_text] | tool |  | Visit slots, set by check_slots |
-| `offer.current` | string | tool |  | Live offer text or 'none', set by get_offer |
-| `booking.id` | string | tool |  | Set by book_site_visit |
-| `booking.slot` | datetime_text | tool |  |  |
-| `consent.site_visit` | verbatim_quote | customer |  | affirmative, present in last customer utterance, not revoked |
-| `consent.whatsapp` | verbatim_quote | customer |  | affirmative, present in last customer utterance, not revoked |
-| `lead.temperature` | enum[hot,warm,cold] | post_call |  |  |
-| `conversion_reason` | enum[visit_booked,brochure_sent,transferred,none] | post_call |  |  |
-| `dropoff_reason` | enum[wrong_person,not_interested,price,availability,opt_out,call_later,none] | post_call |  |  |
-| `brochure.sent` | enum[yes] | tool |  | Set by send_brochure |
+| `get_price.price_from_inr` | integer_inr | tool |  | Starting price in rupees (for budget comparison) |
+| `get_price.say` | text | tool |  | Exact sentence to speak, includes GST note |
+| `check_units.units_left` | integer | tool |  |  |
+| `check_units.say` | text | tool |  |  |
+| `check_slots.slots` | list[text] | tool |  |  |
+| `check_slots.first_slot` | text | tool |  | Slot named in the consent question |
+| `get_offer.offer` | text | tool |  | Live offer or 'none' |
+| `book_site_visit.booking_id` | text | tool |  | Only set on success; backs every 'booked' claim |
+| `send_brochure.sent` | boolean | tool |  | Backs every 'brochure sent' claim |
+| `consent.site_visit` | verbatim_quote | customer | yes | affirmative, in last customer utterance, question named the slot, not revoked |
+| `consent.whatsapp` | verbatim_quote | customer |  | affirmative, in last customer utterance, not revoked |
+| `consent.revoked_at` | turn_index | customer |  | Turn where the customer withdrew |
+| `mark_dnd.dnd` | boolean | tool |  | Opt-out recorded |
+| `schedule_callback.when` | text | tool |  |  |
+| `lead.temperature` | enum[hot,warm,cold] | post_call | yes |  |
+| `conversion_reason` | enum[visit_booked,brochure_sent,transferred,callback,none] | post_call | yes |  |
+| `dropoff_reason` | enum[wrong_person,not_interested,price,sold_out,opt_out,call_later,none] | post_call | yes |  |
+| `guardrail_blocks` | integer | post_call |  | Turns blocked by the auditor (from the audit log) |

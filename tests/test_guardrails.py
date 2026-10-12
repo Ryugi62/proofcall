@@ -6,6 +6,7 @@ from proofcall.domain.guardrails import audit_turn, render_slots, extract_number
 
 CONFIG = AgentConfig.from_dict({
     "name": "test",
+    "repair_once": False,
     "persona": "Asha",
     "disclosure": {"required_any": ["recorded"]},
     "forbidden_claims": [r"\bguarantee(?:d)?\b"],
@@ -190,3 +191,43 @@ def test_crore_in_words_matches_tool_value():
     assert ok == []
     bad = audit_turn(CONFIG, "pitch", "It starts at one crore ten lakh.", None, store, ConsentLedger(), turn_index=3)
     assert "PRICE_UNSOURCED" in codes(bad)
+
+
+def test_consent_phrase_level_negation_and_devanagari():
+    from proofcall.domain.consent import is_affirmative, detect_opt_out
+    assert not is_affirmative("I'm not sure")
+    assert not is_affirmative("not interested, okay")
+    assert not is_affirmative("hmm maybe")
+    assert is_affirmative("Yes, no problem")
+    assert is_affirmative("don't worry, go ahead")
+    assert is_affirmative("हाँ, कर दीजिए")
+    assert not is_affirmative("नहीं, अभी नहीं")
+    assert detect_opt_out("Please don't call me again, remove my number")
+    assert not detect_opt_out("Don't book anything yet")
+
+
+CFG2 = AgentConfig.from_dict(dict(CONFIG.raw, max_questions_per_turn=1, mirror_language=True,
+                                  consent_must_name={"book_slot": "slot"}))
+
+
+def test_multi_question_and_language_mismatch():
+    vs = audit_turn(CFG2, "pitch", "What is your budget? And when do you plan to buy?", None, VariableStore(),
+                    ConsentLedger(), turn_index=3, customer_texts=["I want a 2BHK"])
+    assert "MULTI_QUESTION" in codes(vs)
+    vs = audit_turn(CFG2, "pitch", "Aapka budget kya hai?", None, VariableStore(), ConsentLedger(), turn_index=3,
+                    customer_texts=["I want a 2BHK"])
+    assert "LANGUAGE_MISMATCH" in codes(vs)
+    vs = audit_turn(CFG2, "pitch", "Aapka budget kya hai?", None, VariableStore(), ConsentLedger(), turn_index=3,
+                    customer_texts=["3BHK ka rate kya hai?"])
+    assert vs == []
+
+
+def test_slot_must_be_named_in_consent_question():
+    ledger = ConsentLedger()
+    ledger.record("booking", "yes", last_customer_text="yes")
+    act = {"name": "book_slot", "args": {"slot": "Saturday 10:30 AM"}}
+    vs = audit_turn(CFG2, "booking", "", act, VariableStore(), ledger, 5, agent_texts=["Shall I book Saturday morning?"])
+    assert "SLOT_NOT_NAMED" in codes(vs)
+    vs = audit_turn(CFG2, "booking", "", act, VariableStore(), ledger, 5,
+                    agent_texts=["Shall I book the visit for Saturday 10:30 AM?"])
+    assert vs == []

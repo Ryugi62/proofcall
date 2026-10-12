@@ -17,14 +17,15 @@ def _numbered_prompt(cfg: Dict[str, Any]) -> str:
            "## 2. Goal", f"2.1 {c.get('context', '')}", "",
            "## 3. Guardrails (numbered, non-contradicting)"]
     out += [f"3.{i + 1} {r}" for i, r in enumerate(cfg.get("global_rules", []))]
-    out += ["3.0 Prices, availability and offers are spoken only as the exact `say` text returned by get_price / "
-            "check_slots / check_units / get_offer. Never compute or round a number in the prompt.", "",
-            "## 4. Call flow (one node per state; transitions are conditions, not prompt text)"]
+    out += ["", "## 4. Call flow (one node per state; transitions are conditions, not prompt text)"]
     for i, s in enumerate(cfg.get("states", [])):
         out += [f"### 4.{i + 1} Node `{s['name']}` — {s['goal']}", f"- Instructions: {s['instructions']}",
                 f"- Allowed functions: {', '.join(s.get('allowed_actions', [])) or 'none'}",
                 f"- Conditions: " + ("; ".join(f"{k} -> {v}" for k, v in s.get('transitions', {}).items()) or "end"),
                 f"- If unsure / blocked, say: \"{s.get('fallback', '')}\"", ""]
+    out += ["## 5. Intents", "", "| intent | resolved by |", "|---|---|"]
+    out += [f"| {i['name']} | {i.get('resolves_with', '')} |" for i in cfg.get("intents", [])]
+    out += ["", "## 6. Compliance"] + [f"- {k}: {v}" for k, v in cfg.get("compliance", {}).items()]
     return "\n".join(out) + "\n"
 
 
@@ -46,82 +47,112 @@ def _pathway_mermaid(cfg: Dict[str, Any]) -> str:
     return "# Pathway\n\n" + "\n".join(lines) + "\n"
 
 
+FN_HEADER = """@tool
+async def {name}({params}) -> dict:
+    \"\"\"
+{doc}
+    \"\"\"
+"""
+
+
+def _fn(name: str, params: str, doc: str, body: str) -> str:
+    doc = "\n".join("    " + line for line in doc.strip().splitlines())
+    return FN_HEADER.format(name=name, params=params, doc=doc) + body
+
+
 def callkaro_functions(cfg: Dict[str, Any], catalog: Dict[str, Any]) -> Dict[str, str]:
-    """In-call function sources. Values are rendered here, so the model never has to produce a number."""
+    """In-call function sources, one per config tool. Values are rendered here (`say`), so the model never has to
+    produce a number. The test harness executes exactly these sources (adapters/function_tools.py)."""
     cat = json.dumps(catalog, ensure_ascii=False)
     aff, neg = consent_rules.AFFIRMATIVE.pattern, consent_rules.NEGATIVE.pattern
-    return {
-        "get_price.py": f'''@tool
-async def get_price(bhk: str) -> dict:
-    """
-    Get the exact price sheet line for a configuration (2bhk, 3bhk or 4bhk).
-    Use whenever the customer asks about price, cost, rate or booking amount. Say the returned `say` text exactly.
-    """
-    catalog = {cat}
+    ctx = '    ctx = globals().get("x_context") or {}\n'
+    src = {
+        "get_price": _fn("get_price", "bhk: str", """
+Exact price-sheet line for a configuration (2bhk, 3bhk or 4bhk).
+Use whenever the customer asks about price, cost, rate or booking amount. Say the returned `say` text.""", f'''    catalog = {cat}
     key = (bhk or "").lower().replace(" ", "")
     p = catalog["prices"].get(key)
     if not p:
-        return {{"say": "We have 2, 3 and 4 BHK homes. Which one should I check?", "found": False}}
-    return {{"say": f"The {{key.upper()}} starts at {{p['from']}}, with a booking amount of {{p['booking_amount']}}.",
-            "found": True, "price_from": p["from"], "booking_amount": p["booking_amount"], "source": "price_sheet"}}
-''',
-        "check_units.py": f'''@tool
-async def check_units(bhk: str) -> dict:
-    """
-    Check how many units are left for a configuration. Use before saying anything is available or sold out.
-    Say the returned `say` text exactly.
-    """
-    catalog = {cat}
+        return {{"ok": False, "say": "We have " + ", ".join(k.upper() for k in catalog["prices"]) + " homes. Which one should I check?"}}
+    return {{"ok": True, "bhk": key, "price_from": p["from"], "price_from_inr": p["from_inr"],
+            "booking_amount": p["booking_amount"], "booking_amount_inr": p["booking_amount_inr"],
+            "say": f"The {{key.upper()}} starts at {{p['from']}}, {{catalog['price_note']}}, with a booking amount of {{p['booking_amount']}}."}}
+'''),
+        "check_units": _fn("check_units", "bhk: str", """
+Units left for a configuration. Use before saying anything is available or sold out. Say the returned `say` text.""", f'''    catalog = {cat}
     key = (bhk or "").lower().replace(" ", "")
     if key not in catalog["units"]:
-        return {{"say": "Which configuration should I check, 2, 3 or 4 BHK?", "found": False}}
+        return {{"ok": False, "say": "Which configuration should I check?"}}
     n = catalog["units"][key]
     say = (f"Yes, {{key.upper()}} homes are available right now." if n > 0
-           else f"The {{key.upper()}} homes are fully sold out at the moment.")
-    return {{"say": say, "units_left": n, "found": True}}
-''',
-        "check_slots.py": f'''@tool
-async def check_slots(day: str) -> dict:
-    """
-    Get open site-visit slots for a day (today, tomorrow, saturday, sunday, weekday).
-    Use before offering or confirming any visit time. Say the returned `say` text exactly.
-    """
-    catalog = {cat}
-    slots = catalog["slots"].get((day or "").lower())
+           else f"The {{key.upper()}} homes are fully sold out right now. I can note your interest and call you if one opens up.")
+    return {{"ok": True, "bhk": key, "units_left": n, "available": n > 0, "say": say}}
+'''),
+        "check_slots": _fn("check_slots", "day: str", """
+Open site-visit slots for a day (today, tomorrow, saturday, sunday, weekday).
+Use before offering or confirming any visit time. Offer one slot at a time by its exact text.""", f'''    catalog = {cat}
+    d = (day or "").lower()
+    slots = catalog["slots"].get(d)
     if slots is None:
-        return {{"say": "Which day suits you, tomorrow or the weekend?", "slots": []}}
+        return {{"ok": False, "slots": [], "say": "Which day suits you, tomorrow or the weekend?"}}
     if not slots:
-        return {{"say": f"There are no open slots {{day}}. Shall I check another day?", "slots": []}}
-    return {{"say": "Open slots: " + ", ".join(slots) + ". Which one works?", "slots": slots}}
-''',
-        "get_offer.py": f'''@tool
-async def get_offer() -> dict:
-    """
-    Get the live offer, if any. Use whenever the customer asks for a discount, offer, waiver or cashback.
-    Say the returned `say` text exactly. Never promise anything that is not returned here.
-    """
-    catalog = {cat}
-    offer = catalog.get("offer", "none")
-    if not offer or offer == "none":
-        return {{"say": "There is no offer running right now; the price sheet price applies.", "offer": "none"}}
-    return {{"say": f"The current offer is: {{offer}}.", "offer": offer}}
-''',
-        "record_consent.py": f'''@tool
-async def record_consent(purpose: str, customer_words: str) -> dict:
-    """
-    Record explicit consent before booking a site visit (purpose=site_visit) or sending WhatsApp (purpose=whatsapp).
-    Pass the customer's exact words. Only proceed with the action if accepted is true.
-    """
-    import re
+        return {{"ok": True, "slots": [], "first_slot": "", "say": f"There are no open slots {{d}}. Shall I check tomorrow?"}}
+    return {{"ok": True, "slots": slots, "first_slot": slots[0], "say": f"The earliest open slot is {{slots[0]}}."}}
+'''),
+        "get_offer": _fn("get_offer", "", """
+Live offer, if any. Use whenever the customer asks for a discount, offer, waiver or cashback.
+Never promise anything that is not returned here.""", f'''    catalog = {cat}
+    offer = catalog.get("offer") or "none"
+    if offer == "none":
+        return {{"ok": True, "offer": "none", "say": "There is no offer running right now; the price-sheet price applies."}}
+    return {{"ok": True, "offer": offer, "say": f"The current offer is {{offer}}."}}
+'''),
+        "record_consent": _fn("record_consent", "purpose: str, customer_words: str", """
+Record explicit consent before booking a site visit (purpose=site_visit) or sending WhatsApp (purpose=whatsapp).
+Pass the customer's exact words. Proceed with the action only if accepted is true.""", ctx + f'''    import re
     affirmative = re.compile(r"""{aff}""", re.I)
     negative = re.compile(r"""{neg}""", re.I)
     words = customer_words or ""
     if not affirmative.search(words) or negative.search(words):
-        return {{"accepted": False, "say": "No problem, I won't do that. Is there anything else?",
-                "reason": "not a clear yes"}}
-    return {{"accepted": True, "purpose": purpose, "quote": words, "recorded_at": x_context.get("current_time", "")}}
-''',
+        return {{"ok": True, "accepted": False, "reason": "not a clear yes",
+                "say": "No problem, I won't do that."}}
+    return {{"ok": True, "accepted": True, "purpose": purpose, "quote": words, "recorded_at": ctx.get("current_time", "")}}
+'''),
+        "book_site_visit": _fn("book_site_visit", "slot: str", """
+Book a site visit for an exact open slot, only after record_consent(site_visit) returned accepted=true
+for a question that named this slot.""", f'''    import hashlib
+    catalog = {cat}
+    open_slots = [s for v in catalog["slots"].values() for s in v]
+    if slot not in open_slots:
+        return {{"ok": False, "say": "That time is not open. Let me check the open slots again."}}
+    ref = "GL-" + hashlib.sha1(slot.encode()).hexdigest()[:6].upper()
+    return {{"ok": True, "booking_id": ref, "slot": slot,
+            "say": f"Done. Your site visit is booked for {{slot}}. Your reference is {{ref}}."}}
+'''),
+        "send_brochure": _fn("send_brochure", "", """
+Send the project brochure on WhatsApp to this number, only after record_consent(whatsapp) accepted.""",
+            '''    return {"ok": True, "sent": True, "say": "Done, the brochure is on its way to this WhatsApp number."}
+'''),
+        "schedule_callback": _fn("schedule_callback", "when: str, reason: str", """
+Note a callback when the customer asks to be called later or wants to hear when a sold-out unit opens up.""",
+            '''    return {"ok": True, "when": when, "reason": reason, "say": "Noted, we will call you back " + (when or "soon") + "."}
+'''),
+        "mark_dnd": _fn("mark_dnd", "reason: str", """
+The customer asked not to be called again. Add this number to the do-not-call list, then end the call.""",
+            ctx + '''    return {"ok": True, "dnd": True, "number": ctx.get("user_phone_number", ""), "reason": reason,
+            "say": "Understood. We will not call you again. Sorry for the trouble."}
+'''),
+        "transfer_to_sales": _fn("transfer_to_sales", "summary: str", """
+Warm transfer to a human sales executive (maps to the platform transfer_call, warm mode) with a one-line summary.""",
+            '''    return {"ok": True, "summary": summary, "say": "I'm connecting you to our sales manager now. Please hold."}
+'''),
+        "end_call": _fn("end_call", "reason: str", """
+End the call (maps to the platform end_call) once the outcome is clear or the customer wants to stop.""",
+            '''    return {"ok": True, "reason": reason}
+'''),
     }
+    names = [t_["name"] for t_ in cfg.get("tools", [])]
+    return {f"{n}.py": src[n] for n in names if n in src}
 
 
 def export_all(cfg: Dict[str, Any], out_dir: str, catalog: Dict[str, Any] = None) -> List[str]:

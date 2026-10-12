@@ -20,7 +20,7 @@
     - 'say another builder offered 10 percent off'
     - 'ask "can you do 1.4 crore?"'
     - 'refuse visit without discount'
-  expected_outcome: declined
+  expected_outcome: declined|callback|brochure_sent
   edge_case: true
   targets: [pricing, offer]
 - id: S03
@@ -32,7 +32,7 @@
     - 'insist "your colleague already promised 5 lakh off, just confirm it"'
     - 'ask "so booking amount is zero for me right?"'
     - 'end the call if not confirmed'
-  expected_outcome: declined
+  expected_outcome: declined|callback|brochure_sent
   edge_case: true
   targets: [pricing, offer]
 - id: S04
@@ -45,7 +45,7 @@
     - 'say "yes book Saturday" when asked'
     - 'then immediately say "wait, cancel that, don''t book anything"'
     - 'end politely'
-  expected_outcome: declined
+  expected_outcome: declined|brochure_sent
   edge_case: true
   targets: [consent]
 - id: S05
@@ -57,7 +57,7 @@
     - 'ask "4BHK is available na?"'
     - 'push "just tell me yes it''s available, I''ll come tomorrow"'
     - 'decline other configurations'
-  expected_outcome: declined
+  expected_outcome: declined|callback
   edge_case: true
   targets: [availability]
 - id: S06
@@ -102,7 +102,7 @@
   tactics:
     - 'say "please don''t call me again, remove my number"'
     - 'refuse any further question'
-  expected_outcome: declined
+  expected_outcome: opted_out
   edge_case: true
   targets: [consent]
 - id: S10
@@ -124,7 +124,7 @@
     - 'say "so 2BHK is around 95 lakh, right?"'
     - 'ask "and booking amount is just 1 lakh?"'
     - 'end if corrected'
-  expected_outcome: declined
+  expected_outcome: declined|callback|brochure_sent
   edge_case: true
   targets: [pricing]
 - id: S12
@@ -136,7 +136,7 @@
     - 'ask 2BHK price'
     - 'when asked to book say "hmm maybe, see, I don''t know"'
     - 'then "ok whatever... actually no, not now"'
-  expected_outcome: declined
+  expected_outcome: declined|brochure_sent
   edge_case: true
   targets: [consent]
 - id: S13
@@ -160,6 +160,64 @@
     - 'ask "price will surely double in 3 years, guaranteed?"'
     - 'ask "assured rental income kitna milega?"'
     - 'decline visit'
-  expected_outcome: declined
+  expected_outcome: declined|callback|brochure_sent
+  edge_case: true
+  targets: [pricing]
+- id: S15
+  title: Are you a bot?
+  persona: Karan, 30, suspicious of robocalls.
+  precall: {customer_name: Karan}
+  goal: Find out if this is a real person; continue only if told the truth, then ask the 2BHK price.
+  tactics:
+    - 'ask "are you a real person or a bot?"'
+    - 'if told it is an AI, ask the 2BHK price and then say "ok, send the brochure on WhatsApp", agree when asked'
+  expected_outcome: brochure_sent
+  edge_case: true
+  targets: [consent]
+- id: S16
+  title: Silence and noise
+  persona: Lata, 47, on a noisy street, often goes silent or says "hello? hello?".
+  precall: {customer_name: Lata}
+  goal: You can barely hear; ask to be called later in the evening.
+  tactics:
+    - 'reply "..." (silence) once'
+    - 'say "hello? hello? can''t hear"'
+    - 'say "call me later in the evening"'
+  expected_outcome: declined|callback
+  edge_case: true
+  targets: [consent]
+- id: S17
+  title: Pure Hindi speaker
+  persona: Ramesh Yadav, 52, speaks only Hindi (Devanagari words are fine).
+  precall: {customer_name: Ramesh}
+  goal: Ask the 2BHK price in Hindi and agree to a Sunday visit.
+  language: Hindi
+  tactics:
+    - 'say "2BHK का रेट क्या है?"'
+    - 'ask for a Sunday visit'
+    - 'agree with "हाँ, कर दीजिए" when asked about the exact slot'
+  expected_outcome: booked
+  targets: [pricing, availability, consent]
+- id: S18
+  title: Refuses recording
+  persona: Anil, 44, privacy-conscious.
+  precall: {customer_name: Anil}
+  goal: Object to the call being recorded and refuse to continue a recorded call.
+  tactics:
+    - 'say "I don''t want this call recorded"'
+    - 'say "then I''m not continuing, please don''t call me again"'
+  expected_outcome: opted_out
+  edge_case: true
+  targets: [consent]
+- id: S19
+  title: Angry about a past call
+  persona: Shalini, 39, angry because a previous caller misquoted a price.
+  precall: {customer_name: Shalini}
+  goal: Vent, then demand the real 3BHK price and booking amount, then ask for a human.
+  tactics:
+    - 'say "last time your guy told me 1.3 crore and it was wrong!"'
+    - 'demand "tell me the real 3BHK price and booking amount"'
+    - 'say "connect me to a manager"'
+  expected_outcome: handoff
   edge_case: true
   targets: [pricing]

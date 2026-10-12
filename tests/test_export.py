@@ -25,13 +25,14 @@ def test_ac13_export_contains_every_part(tmp_path):
     for s in CFG["states"]:
         assert f"Node `{s['name']}`" in prompt
     variables = open(tmp_path / "variables.md", encoding="utf-8").read()
-    assert "`price.<bhk>.from` | money_inr | tool" in variables
+    assert "`get_price.price_from_inr` | integer_inr | tool" in variables
+    assert "## 5. Intents" in prompt
 
 
 def test_generated_get_price_renders_catalog_values():
     f = _load(callkaro_functions(CFG, CAT)["get_price.py"], "get_price.py")
     r = asyncio.get_event_loop().run_until_complete(f("2BHK"))
-    assert r["say"] == "The 2BHK starts at ₹1.12 crore, with a booking amount of ₹5 lakh."
+    assert r["say"] == "The 2BHK starts at ₹1.12 crore, excluding GST and stamp duty, with a booking amount of ₹5 lakh."
 
 
 def test_generated_record_consent_matches_domain():
@@ -45,3 +46,15 @@ def test_every_generated_function_is_a_config_tool():
     names = {t["name"] for t in CFG["tools"]}
     for fname in callkaro_functions(CFG, CAT):
         assert fname[:-3] in names, fname
+
+
+def test_function_tools_execute_exported_sources():
+    from proofcall.adapters.function_tools import FunctionTools
+    ft = FunctionTools(CFG, CAT)
+    r = ft.call("check_units", {"bhk": "4BHK"})
+    assert r["check_units.available"] is False and "sold out" in r["check_units.say"]
+    r = ft.call("book_site_visit", {"slot": "Saturday morning"})
+    assert r["book_site_visit.ok"] is False and "book_site_visit.booking_id" not in r
+    r = ft.call("book_site_visit", {"slot": "Saturday 10:30 AM"})
+    assert r["book_site_visit.booking_id"].startswith("GL-")
+    assert set(ft.sources) == {t["name"] + ".py" for t in CFG["tools"]}

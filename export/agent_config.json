@@ -1,6 +1,6 @@
 {
  "name": "proofcall-rehearsal-realestate",
- "version": "0.1.0",
+ "version": "0.2.0",
  "note": "Rehearsal problem (fictional company) used before the official problem statement is released. Replace company, catalog and states with the official brief.",
  "persona": "Asha",
  "company": {
@@ -25,15 +25,18 @@
   ]
  },
  "global_rules": [
-  "Open by saying you are an AI assistant and that the call is recorded; continue only if the customer agrees to talk.",
-  "Prices, booking amounts, offers, unit availability and visit slots come only from tool results. Never estimate, round or confirm a number the customer suggests.",
-  "If the customer asks for a discount, call get_offer. If it returns no offer, say there is no offer right now. Never promise a discount.",
-  "Before booking a visit or sending WhatsApp, ask a yes/no question naming exactly what you will do, then call record_consent with the customer's exact words.",
-  "If the customer says no, cancel, stop, or asks not to be called, stop that action immediately, confirm, and end politely.",
-  "If the customer asks for a human or is ready to buy, call transfer_to_sales.",
-  "If you are not talking to the person who enquired, apologise and end the call without pitching.",
-  "Keep every reply under 25 words, one question at a time, mirror the customer's language (English or Hinglish).",
-  "Never say guaranteed, assured returns, best price, or lowest price."
+  "Facts (prices, booking amounts, offers, unit availability, visit slots) are spoken only from function results, preferably by inserting the function's {{<function>.say}} text. Never estimate, round, compute or confirm a number the customer suggests.",
+  "Open by saying you are an AI assistant and that the call is recorded. Continue only if the customer agrees to talk.",
+  "If the customer asks for a discount or offer, call get_offer and say only what it returns. Never promise a discount.",
+  "Before booking a visit, offer one exact slot from check_slots and ask a yes/no question that names that slot. On a clear yes, call record_consent(site_visit, exact words) and then book_site_visit with that slot.",
+  "Before sending WhatsApp, ask a yes/no question. On a clear yes, call record_consent(whatsapp, exact words) and then send_brochure.",
+  "If the customer refuses one action (booking or WhatsApp), drop only that action and continue politely.",
+  "If the customer asks not to be called again, call mark_dnd and then end_call. Do not pitch anything.",
+  "If the customer asks for a human or says they are ready to buy, call transfer_to_sales with a one-line summary.",
+  "If the person is not the enquirer, apologise and end_call without pitching.",
+  "If the asked configuration is sold out or the customer wants a later call, offer schedule_callback.",
+  "Ask at most one question per turn, keep replies under 25 words, and reply in English unless the customer speaks Hindi or Hinglish.",
+  "Never say guaranteed, assured returns, best price, or lowest price. Say you are an AI if asked."
  ],
  "forbidden_claims": [
   "\\bguarantee(?:d)?\\b",
@@ -45,18 +48,23 @@
  "claim_rules": [
   {
    "code": "AVAILABILITY_UNVERIFIED",
-   "pattern": "\\b(?:is|are) (?:still )?(?:available|free|open)\\b|\\bwe have (?:a |some )?(?:units?|flats?|slots?)\\b|\\b(?:fully|already) booked\\b|\\bsold out\\b|\\bno (?:units?|slots?) (?:left|available)\\b|\\bavailable hai\\b|\\bkhali hai\\b",
-   "requires_var_prefix": "availability."
+   "pattern": "\\b(?:is|are) (?:still )?(?:available|free|open)\\b|\\bwe have (?:a |some )?(?:units?|flats?|slots?)\\b|\\b(?:fully|already) booked\\b|\\bsold out\\b|\\bno (?:units?|slots?) (?:left|available)\\b|\\bavailable (?:hai|hain|nahi|nahin)\\b|\\bkhali hai\\b|\\b(?:free|open|available) hai\\b|उपलब्ध",
+   "requires_var_prefix": "check_units.|check_slots."
   },
   {
    "code": "BOOKING_UNBACKED",
-   "pattern": "\\b(?:i have|i've|is now|has been|successfully|visit is|visit has been)\\s+(?:booked|confirmed|scheduled)\\b|\\bbook ho gaya\\b|\\bbook kar diya\\b",
-   "requires_var_prefix": "booking."
+   "pattern": "\\b(?:i have|i've|is now|has been|successfully|visit is|visit has been)\\s+(?:booked|confirmed|scheduled)\\b|\\b(?:i am|i'm)\\s+(?:booking|confirming|scheduling)\\b|\\bbook ho gaya\\b|\\bbook kar diya\\b|\\bbook kar rahi\\b|\\bbooking kar (?:rahi|raha|di|diya)\\b|\\bbook kar (?:rahi|raha) (?:hoon|hun|hu)\\b",
+   "requires_var_prefix": "book_site_visit.booking_id"
+  },
+  {
+   "code": "BROCHURE_UNBACKED",
+   "pattern": "\\bbrochure (?:bhej diya|has been sent|is on its way|sent)\\b|\\b(?:sent|bhej diya)\\b.{0,20}\\bbrochure\\b|\\bbrochure\\b.{0,20}\\bbhej (?:diya|di)\\b",
+   "requires_var_prefix": "send_brochure.sent"
   },
   {
    "code": "OFFER_UNVERIFIED",
-   "pattern": "\\b(?:discount|cashback|waiver) (?:of|is|on)\\b|\\b(?:special|festive|limited[- ]period|current) offer\\b|\\boffer (?:is|of)\\b|\\b\\w+ off on\\b",
-   "requires_var_prefix": "offer."
+   "pattern": "\\b(?:discount|cashback|waiver) (?:of|is|on)\\b|\\b(?:special|festive|limited[- ]period|current) offer\\b|\\boffer (?:is|of)\\b|\\b\\w+ off on\\b|\\b(?:discount|offer|waiver|cashback)\\b.{0,25}\\b(?:running|available|chal raha|mil raha|milega)\\b|\\b\\d+\\s?% (?:\\w+ )?discount\\b",
+   "requires_var_prefix": "get_offer."
   }
  ],
  "consent_gated_actions": {
@@ -70,12 +78,19 @@
    "goal": "Disclose AI + recording, confirm identity and permission to talk",
    "instructions": "Greet by name, say you are an AI assistant, the call is recorded, ask if it is a good time. If wrong person -> close.",
    "allowed_actions": [
-    "end_call"
+    "end_call",
+    "mark_dnd",
+    "get_price",
+    "check_units",
+    "schedule_callback"
    ],
    "transitions": {
     "agrees_to_talk": "qualify",
+    "ask_price": "pitch",
+    "ask_availability": "pitch",
     "wrong_person": "close",
-    "call_later": "close"
+    "call_later": "close",
+    "opt_out": "close"
    },
    "fallback": "Hi, this is Asha, an AI assistant from Greenleaf Residences. This call is recorded. Is this a good time?"
   },
@@ -87,32 +102,39 @@
     "get_price",
     "check_units",
     "end_call",
-    "transfer_to_sales"
+    "mark_dnd",
+    "transfer_to_sales",
+    "schedule_callback"
    ],
    "transitions": {
     "ask_price": "pitch",
     "ask_availability": "pitch",
     "not_interested": "close"
    },
-   "fallback": "Sure. Which configuration are you looking at, 2, 3 or 4 BHK?"
+   "fallback": "Sure. Which configuration should I check for you?"
   },
   {
    "name": "pitch",
    "goal": "Give exact price and availability for the asked configuration from tools",
-   "instructions": "Call get_price and check_units for the configuration before stating any number or availability. Speak values via slots.",
+   "instructions": "Call get_price / check_units for the configuration the customer named before stating any number or availability. Insert {{get_price.say}} / {{check_units.say}}.",
    "allowed_actions": [
     "get_price",
     "check_units",
     "get_offer",
+    "check_slots",
     "end_call",
-    "transfer_to_sales"
+    "mark_dnd",
+    "transfer_to_sales",
+    "schedule_callback"
    ],
    "transitions": {
     "objection_price": "objection",
     "want_visit": "visit_booking",
-    "want_brochure": "followup"
+    "want_brochure": "followup",
+    "sold_out": "close",
+    "opt_out": "close"
    },
-   "fallback": "Let me give you the exact figure from our price sheet. Which configuration should I check?"
+   "fallback": "{{get_price.say}} || {{check_units.say}} || Let me read that from our price sheet so it is exact."
   },
   {
    "name": "objection",
@@ -122,8 +144,11 @@
     "get_offer",
     "get_price",
     "check_units",
+    "check_slots",
     "end_call",
-    "transfer_to_sales"
+    "mark_dnd",
+    "transfer_to_sales",
+    "schedule_callback"
    ],
    "transitions": {
     "want_visit": "visit_booking",
@@ -135,19 +160,21 @@
   {
    "name": "visit_booking",
    "goal": "Book a site visit only with explicit consent",
-   "instructions": "Call check_slots for the day asked. Offer slots via slots. Ask: 'Shall I book the site visit for <slot>?' On yes, record_consent(site_visit, exact words), then book_site_visit(slot).",
+   "instructions": "Call check_slots for the day asked. Offer {{check_slots.first_slot}} by name and ask 'Shall I book your site visit for <slot>?'. On a clear yes: record_consent(site_visit, exact words) then book_site_visit(slot) in the same turn.",
    "allowed_actions": [
     "check_slots",
     "record_consent",
     "book_site_visit",
     "end_call",
-    "transfer_to_sales"
+    "mark_dnd",
+    "transfer_to_sales",
+    "schedule_callback"
    ],
    "transitions": {
     "booked": "close",
     "declines": "close"
    },
-   "fallback": "Before I book anything, may I confirm: do you want me to book a site visit?"
+   "fallback": "Shall I book your site visit for {{check_slots.first_slot}}? || Which day and time should I check for your visit?"
   },
   {
    "name": "followup",
@@ -156,21 +183,27 @@
    "allowed_actions": [
     "record_consent",
     "send_brochure",
-    "end_call"
+    "end_call",
+    "mark_dnd",
+    "schedule_callback"
    ],
    "transitions": {
     "sent": "close",
     "declines": "close"
    },
-   "fallback": "Would you like me to send the brochure on WhatsApp to this number?"
+   "fallback": "Shall I send the brochure to this WhatsApp number?"
   },
   {
    "name": "close",
    "goal": "Summarise next step, tag the lead and end the call",
-   "instructions": "One-line summary of what happens next, thank them, call end_call.",
+   "instructions": "One-line summary of what happens next, thank them, call end_call. If they asked not to be called, mark_dnd first.",
    "allowed_actions": [
     "end_call",
-    "transfer_to_sales"
+    "transfer_to_sales",
+    "mark_dnd",
+    "schedule_callback",
+    "send_brochure",
+    "record_consent"
    ],
    "transitions": {},
    "fallback": "Thank you for your time. Have a good day."
@@ -188,19 +221,28 @@
    "name": "lead_source",
    "type": "string",
    "source": "constant",
+   "required": true,
    "description": "Where the enquiry came from"
+  },
+  {
+   "name": "lead.language",
+   "type": "enum[en,hinglish,hi]",
+   "source": "customer",
+   "required": true,
+   "description": "Language the customer speaks; agent mirrors it"
   },
   {
    "name": "lead.bhk",
    "type": "enum[2bhk,3bhk,4bhk]",
    "source": "customer",
+   "required": true,
    "description": "Configuration asked"
   },
   {
-   "name": "lead.budget",
-   "type": "string",
+   "name": "lead.budget_inr",
+   "type": "integer",
    "source": "customer",
-   "description": "Budget in customer's words"
+   "description": "Budget normalised to rupees (post-call extraction)"
   },
   {
    "name": "lead.timeline",
@@ -208,91 +250,125 @@
    "source": "customer"
   },
   {
-   "name": "price.<bhk>.from",
-   "type": "money_inr",
+   "name": "get_price.price_from_inr",
+   "type": "integer_inr",
    "source": "tool",
-   "description": "Starting price, set by get_price"
+   "description": "Starting price in rupees (for budget comparison)"
   },
   {
-   "name": "price.<bhk>.booking_amount",
-   "type": "money_inr",
+   "name": "get_price.say",
+   "type": "text",
    "source": "tool",
-   "description": "Booking amount, set by get_price"
+   "description": "Exact sentence to speak, includes GST note"
   },
   {
-   "name": "availability.units.<bhk>",
+   "name": "check_units.units_left",
    "type": "integer",
-   "source": "tool",
-   "description": "Units left, set by check_units"
-  },
-  {
-   "name": "availability.slots",
-   "type": "list[datetime_text]",
-   "source": "tool",
-   "description": "Visit slots, set by check_slots"
-  },
-  {
-   "name": "offer.current",
-   "type": "string",
-   "source": "tool",
-   "description": "Live offer text or 'none', set by get_offer"
-  },
-  {
-   "name": "booking.id",
-   "type": "string",
-   "source": "tool",
-   "description": "Set by book_site_visit"
-  },
-  {
-   "name": "booking.slot",
-   "type": "datetime_text",
    "source": "tool"
+  },
+  {
+   "name": "check_units.say",
+   "type": "text",
+   "source": "tool"
+  },
+  {
+   "name": "check_slots.slots",
+   "type": "list[text]",
+   "source": "tool"
+  },
+  {
+   "name": "check_slots.first_slot",
+   "type": "text",
+   "source": "tool",
+   "description": "Slot named in the consent question"
+  },
+  {
+   "name": "get_offer.offer",
+   "type": "text",
+   "source": "tool",
+   "description": "Live offer or 'none'"
+  },
+  {
+   "name": "book_site_visit.booking_id",
+   "type": "text",
+   "source": "tool",
+   "description": "Only set on success; backs every 'booked' claim"
+  },
+  {
+   "name": "send_brochure.sent",
+   "type": "boolean",
+   "source": "tool",
+   "description": "Backs every 'brochure sent' claim"
   },
   {
    "name": "consent.site_visit",
    "type": "verbatim_quote",
    "source": "customer",
-   "validation": "affirmative, present in last customer utterance, not revoked"
+   "required": true,
+   "validation": "affirmative, in last customer utterance, question named the slot, not revoked"
   },
   {
    "name": "consent.whatsapp",
    "type": "verbatim_quote",
    "source": "customer",
-   "validation": "affirmative, present in last customer utterance, not revoked"
+   "validation": "affirmative, in last customer utterance, not revoked"
+  },
+  {
+   "name": "consent.revoked_at",
+   "type": "turn_index",
+   "source": "customer",
+   "description": "Turn where the customer withdrew"
+  },
+  {
+   "name": "mark_dnd.dnd",
+   "type": "boolean",
+   "source": "tool",
+   "description": "Opt-out recorded"
+  },
+  {
+   "name": "schedule_callback.when",
+   "type": "text",
+   "source": "tool"
   },
   {
    "name": "lead.temperature",
    "type": "enum[hot,warm,cold]",
-   "source": "post_call"
+   "source": "post_call",
+   "required": true
   },
   {
    "name": "conversion_reason",
-   "type": "enum[visit_booked,brochure_sent,transferred,none]",
-   "source": "post_call"
+   "type": "enum[visit_booked,brochure_sent,transferred,callback,none]",
+   "source": "post_call",
+   "required": true
   },
   {
    "name": "dropoff_reason",
-   "type": "enum[wrong_person,not_interested,price,availability,opt_out,call_later,none]",
-   "source": "post_call"
+   "type": "enum[wrong_person,not_interested,price,sold_out,opt_out,call_later,none]",
+   "source": "post_call",
+   "required": true
   },
   {
-   "name": "brochure.sent",
-   "type": "enum[yes]",
-   "source": "tool",
-   "description": "Set by send_brochure"
+   "name": "guardrail_blocks",
+   "type": "integer",
+   "source": "post_call",
+   "description": "Turns blocked by the auditor (from the audit log)"
   }
  ],
  "tools": [
   {
    "name": "get_price",
    "kind": "lookup",
-   "description": "Exact price sheet for a configuration",
+   "description": "Exact price-sheet line for a configuration",
    "params": {
     "bhk": "2bhk|3bhk|4bhk"
    },
    "sets": [
-    "price.<bhk>.from",
-    "price.<bhk>.booking_amount"
+    "get_price.say",
+    "get_price.price_from",
+    "get_price.price_from_inr",
+    "get_price.booking_amount",
+    "get_price.booking_amount_inr"
    ]
   },
   {
@@ -303,18 +379,22 @@
     "bhk": "2bhk|3bhk|4bhk"
    },
    "sets": [
-    "availability.units.<bhk>"
+    "check_units.say",
+    "check_units.units_left",
+    "check_units.available"
    ]
   },
   {
    "name": "check_slots",
    "kind": "lookup",
-   "description": "Site-visit slots for a day",
+   "description": "Open site-visit slots for a day",
    "params": {
     "day": "today|tomorrow|saturday|sunday|weekday"
    },
    "sets": [
-    "availability.slots"
+    "check_slots.say",
+    "check_slots.slots",
+    "check_slots.first_slot"
    ]
   },
   {
@@ -323,7 +403,8 @@
    "description": "Live offer, if any",
    "params": {},
    "sets": [
-    "offer.current"
+    "get_offer.say",
+    "get_offer.offer"
    ]
   },
   {
@@ -338,28 +419,61 @@
   {
    "name": "book_site_visit",
    "kind": "action",
-   "description": "Book a site visit (needs consent site_visit)",
+   "description": "Book an exact open slot (needs consent site_visit for a question naming the slot)",
    "params": {
-    "slot": "one of availability.slots"
+    "slot": "exact text of an open slot"
    },
    "sets": [
-    "booking.id",
-    "booking.slot"
+    "book_site_visit.say",
+    "book_site_visit.booking_id",
+    "book_site_visit.slot"
    ]
   },
   {
    "name": "send_brochure",
    "kind": "action",
    "description": "Send brochure on WhatsApp (needs consent whatsapp)",
-   "params": {}
+   "params": {},
+   "sets": [
+    "send_brochure.say",
+    "send_brochure.sent"
+   ]
+  },
+  {
+   "name": "schedule_callback",
+   "kind": "action",
+   "description": "Note a callback (call later / sold-out waitlist)",
+   "params": {
+    "when": "text",
+    "reason": "text"
+   },
+   "sets": [
+    "schedule_callback.say",
+    "schedule_callback.when"
+   ]
+  },
+  {
+   "name": "mark_dnd",
+   "kind": "action",
+   "description": "Add this number to the do-not-call list",
+   "params": {
+    "reason": "text"
+   },
+   "sets": [
+    "mark_dnd.say",
+    "mark_dnd.dnd"
+   ]
   },
   {
    "name": "transfer_to_sales",
    "kind": "action",
-   "description": "Warm transfer to a human sales executive with a one-line summary",
+   "description": "Warm transfer to a human sales executive with a summary",
    "params": {
     "summary": "text"
-   }
+   },
+   "sets": [
+    "transfer_to_sales.say"
+   ]
   },
   {
    "name": "end_call",
@@ -426,19 +540,43 @@
   {
    "name": "not_interested",
    "resolves_with": "end_call"
+  },
+  {
+   "name": "sold_out",
+   "resolves_with": "schedule_callback"
+  },
+  {
+   "name": "ask_if_bot",
+   "resolves_with": "say you are an AI assistant"
+  },
+  {
+   "name": "refuse_recording",
+   "resolves_with": "end_call"
   }
  ],
- "allowed_numbers": [
-  "2",
-  "3",
-  "4"
- ],
+ "allowed_numbers": [],
  "once_actions": {
-  "book_site_visit": "booking.id",
-  "send_brochure": "brochure.sent"
+  "book_site_visit": "book_site_visit.booking_id",
+  "send_brochure": "send_brochure.sent",
+  "mark_dnd": "mark_dnd.dnd"
  },
  "action_done_lines": {
-  "book_site_visit": "Done. Your site visit is booked for {{booking.slot}}, reference {{booking.id}}.",
-  "send_brochure": "Done, the brochure is on its way to this WhatsApp number."
+  "book_site_visit": "{{book_site_visit.say}}",
+  "send_brochure": "{{send_brochure.say}}",
+  "mark_dnd": "{{mark_dnd.say}}",
+  "transfer_to_sales": "{{transfer_to_sales.say}}",
+  "schedule_callback": "{{schedule_callback.say}}"
+ },
+ "max_questions_per_turn": 1,
+ "mirror_language": true,
+ "consent_must_name": {
+  "book_site_visit": "slot"
+ },
+ "compliance": {
+  "call_window_ist": "09:00-21:00 (platform Call Window)",
+  "dnd": "platform DND list + mark_dnd function",
+  "recording_disclosure": "opening line",
+  "consent": "verbatim quote, last customer utterance, revocable",
+  "reference": "TRAI TCCCPR 2025 amendment (secondary sources), DPDP Act 2023"
  }
 }

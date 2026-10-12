@@ -86,7 +86,14 @@ def _amounts(text: str) -> List[Tuple[str, bool]]:
     text = (text or "").translate(DEVANAGARI_DIGITS)
     for m in DIGITS.finditer(text):
         before, after = text[max(0, m.start() - 8):m.start()], text[m.end():m.end() + 12]
+        if LABEL_AFTER.match(after):
+            continue            # "2BHK", "3 BHK" are configuration names, not quantities
         money = bool(CURRENCY_BEFORE.search(before) or CURRENCY_AFTER.search(after))
+        sc = SCALE_AFTER.match(after)
+        if sc:                  # "₹2 lakh" is 200000, never just "2"
+            val = float(m.group(0).replace(",", "")) * SCALE_OF[sc.group(1).lower()]
+            out.append((_norm_number(str(round(val, 2))), True))
+            continue
         out.append((_norm_number(m.group(0)), money))
     toks = [(m.group(0).lower(), m.start(), m.end()) for m in TOKEN.finditer(text)]
     def is_num(k: int) -> bool:
@@ -119,6 +126,8 @@ def _amounts(text: str) -> List[Tuple[str, bool]]:
 
 
 SCALED = re.compile(r"(\d[\d,]*(?:\.\d+)?)\s*(lakh|lakhs|lac|crore|crores|k|thousand|हज़ार|लाख|करोड़)\b", re.I)
+LABEL_AFTER = re.compile(r"^\s?(?:bhk|rk)\b", re.I)
+SCALE_AFTER = re.compile(r"^\s*(lakh|lakhs|lac|crore|crores|thousand|हज़ार|लाख|करोड़)\b", re.I)
 SCALE_OF = {"lakh": 100000, "lakhs": 100000, "lac": 100000, "crore": 10000000, "crores": 10000000, "k": 1000,
             "thousand": 1000, "हज़ार": 1000, "लाख": 100000, "करोड़": 10000000}
 
@@ -142,7 +151,7 @@ def render_slots(text: str, store: VariableStore) -> Tuple[str, List[str]]:
 
     def sub(m: "re.Match[str]") -> str:
         name = m.group(1)
-        if not store.has(name):
+        if not store.has(name) or store.get(name) in ("", None):
             missing.append(name)
             return m.group(0)
         return str(store.get(name))
@@ -150,9 +159,26 @@ def render_slots(text: str, store: VariableStore) -> Tuple[str, List[str]]:
     return SLOT.sub(sub, text or ""), missing
 
 
+HINDI_CUSTOMER_EXTRA = {"ji", "bhej", "kariye", "karo", "batao", "bhai", "mujhe", "hoon", "kijiye", "haanji", "acha",
+                        "accha", "nahi", "matlab", "rate", "kitne"}
+HINDI_MARKERS = {"hai", "hain", "aap", "aapka", "aapko", "aapki", "kya", "nahi", "nahin", "kar", "karna", "karein",
+                 "chahenge", "chahengi", "chahiye", "toh", "mein", "sirf", "bhi", "haan", "theek", "bataiye", "dijiye",
+                 "hoga", "raha", "rahi", "gaya", "diya", "kijiye", "abhi", "kitna", "kab"}
+
+
+def is_hindi(text: str, lenient: bool = False) -> bool:
+    """Agent text: >=2 Hindi function words. Customer text (lenient): any Hindi word counts."""
+    if re.search(r"[\u0900-\u097F]", text or ""):
+        return True
+    words = re.findall(r"[a-z]+", (text or "").lower())
+    if lenient:
+        return any(w in HINDI_MARKERS or w in HINDI_CUSTOMER_EXTRA for w in words)
+    return sum(1 for w in words if w in HINDI_MARKERS) >= 2
+
+
 def audit_turn(config: AgentConfig, state_name: str, spoken: str, action: Optional[Dict[str, Any]],
                store: VariableStore, ledger: ConsentLedger, turn_index: int,
-               customer_texts: Sequence[str] = ()) -> List[Violation]:
+               customer_texts: Sequence[str] = (), agent_texts: Sequence[str] = ()) -> List[Violation]:
     """Audit one agent turn (the text that will be spoken + the action it takes)."""
     vs: List[Violation] = []
     text = spoken or ""
@@ -170,7 +196,7 @@ def audit_turn(config: AgentConfig, state_name: str, spoken: str, action: Option
 
     for rule in config.claim_rules:
         m = re.search(rule.pattern, text, re.I)
-        if m and not store.has_prefix(rule.requires_var_prefix):
+        if m and not any(store.has_prefix(px) for px in rule.requires_var_prefix.split("|")):
             vs.append(Violation(rule.code, f"claim '{m.group(0)}' before any {rule.requires_var_prefix}* tool result"))
 
     for pat in config.forbidden_claims:
@@ -182,8 +208,22 @@ def audit_turn(config: AgentConfig, state_name: str, spoken: str, action: Option
         if not any(p.lower() in text.lower() for p in config.disclosure_required_any):
             vs.append(Violation("DISCLOSURE_MISSING", "opening turn lacks disclosure: " + " / ".join(config.disclosure_required_any)))
 
+    max_q = config.raw.get("max_questions_per_turn")
+    if max_q and text.count("?") > max_q:
+        vs.append(Violation("MULTI_QUESTION", f"{text.count('?')} questions in one turn (max {max_q})"))
+
+    if config.raw.get("mirror_language") and customer_texts and text:
+        if not any(is_hindi(c, lenient=True) for c in customer_texts) and is_hindi(text):
+            vs.append(Violation("LANGUAGE_MISMATCH", "customer has spoken only English; agent replied in Hindi/Hinglish"))
+
     if action and action.get("name"):
         name = action["name"]
+        must = config.raw.get("consent_must_name", {}).get(name)
+        if must:
+            value = str((action.get("args") or {}).get(must, ""))
+            asked = agent_texts[-1] if agent_texts else ""
+            if not value or value.lower() not in asked.lower():
+                vs.append(Violation("SLOT_NOT_NAMED", f"{name}({must}={value!r}) was not named in the yes/no question"))
         try:
             allowed = config.state(state_name).allowed_actions
         except KeyError:

@@ -37,10 +37,12 @@ def _load_env(path: str = "~/.config/jarvis/env/gemini.env") -> None:
 
 
 def cmd_run(a: argparse.Namespace) -> int:
-    from ..adapters.catalog_tools import CatalogTools
+    from ..adapters.function_tools import FunctionTools
     from ..adapters.gemini import GeminiModel
     _load_env()
-    config = AgentConfig.from_dict(json.load(open(a.config, encoding="utf-8")))
+    raw_cfg = json.load(open(a.config, encoding="utf-8"))
+    catalog = json.load(open(a.catalog, encoding="utf-8"))
+    config = AgentConfig.from_dict(raw_cfg)
     scenarios = [Scenario.from_dict(d) for d in yaml.safe_load(open(a.scenarios, encoding="utf-8"))]
     if a.only:
         keep = set(a.only.split(","))
@@ -52,7 +54,7 @@ def cmd_run(a: argparse.Namespace) -> int:
     for sc in scenarios:
         for mode in a.modes.split(","):
             for run in range(1, a.runs + 1):
-                eng = AgentEngine(config, agent_llm, CatalogTools.load(a.catalog), MonoClock(), mode=mode)
+                eng = AgentEngine(config, agent_llm, FunctionTools(raw_cfg, catalog), MonoClock(), mode=mode)
                 def show(row):
                     tag = "AGENT" if row["role"] == "agent" else "CUST "
                     extra = (" BLOCKED" if row.get("blocked") else "") + (" VIOL " + ",".join(v["code"] for v in row["violations"]) if row.get("violations") else "")
@@ -66,6 +68,20 @@ def cmd_run(a: argparse.Namespace) -> int:
     with open(os.path.join(a.out, "report.md"), "w", encoding="utf-8") as f:
         f.write(report_markdown(records, {s.id: s for s in scenarios}))
     print(f"LLM calls: agent={agent_llm.calls} customer={cust_llm.calls}")
+    return 0
+
+
+def cmd_report(a: argparse.Namespace) -> int:
+    from ..application.simulate import CallRecord
+    data = json.load(open(a.results, encoding="utf-8"))
+    records = [CallRecord(**c) for c in data["calls"]]
+    scenarios = {d["id"]: Scenario.from_dict(d) for d in yaml.safe_load(open(a.scenarios, encoding="utf-8"))}
+    out = os.path.join(os.path.dirname(a.results), "report.md")
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(report_markdown(records, scenarios))
+    with open(a.results, "w", encoding="utf-8") as f:
+        f.write(records_to_json(records))
+    print(out)
     return 0
 
 
@@ -110,8 +126,11 @@ def main(argv: List[str] = None) -> int:
     d.add_argument("--config", required=True)
     d.add_argument("--call", required=True)
     d.add_argument("--out", required=True)
+    rp = sub.add_parser("report")
+    rp.add_argument("--results", required=True)
+    rp.add_argument("--scenarios", required=True)
     a = ap.parse_args(argv)
-    return {"run": cmd_run, "export": cmd_export, "render": cmd_render}[a.cmd](a)
+    return {"run": cmd_run, "export": cmd_export, "render": cmd_render, "report": cmd_report}[a.cmd](a)
 
 
 if __name__ == "__main__":

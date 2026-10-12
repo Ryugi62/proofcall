@@ -17,11 +17,13 @@ def block(results_paths):
         s = json.load(open(p, encoding="utf-8"))["summary"]
         run = os.path.basename(os.path.dirname(p))
         lines += [f"**Run `{run}`** — [report](runs/{run}/report.md)", "",
-                  "| mode | calls | agent turns | violations | violation rate | blocked before speaking | outcome match | median model ms | median audit ms |",
-                  "|---|---|---|---|---|---|---|---|---|"]
+                  "| mode | calls | agent turns | violations | turns with a violation (95% CI) | blocked before speaking | outcome match | task success (95% CI) | median / p90 model ms | median audit ms |",
+                  "|---|---|---|---|---|---|---|---|---|---|"]
         for mode, m in s.items():
-            lines.append(f"| {mode} | {m['calls']} | {m['agent_turns']} | {m['violations']} | {m['violation_rate']} | "
-                         f"{m['blocked_turns']} | {m['outcome_match']}/{m['calls']} | {m['median_model_ms']} | {m['median_audit_ms']} |")
+            lines.append(f"| {mode} | {m['calls']} | {m['agent_turns']} | {m['violations']} | "
+                         f"{m['turns_with_violation']} {m['turn_violation_ci95']} | {m['blocked_turns']} | "
+                         f"{m['outcome_match']}/{m['calls']} | {m['task_success']}/{m['calls']} {m['task_success_ci95']} | "
+                         f"{m['median_model_ms']} / {m['p90_model_ms']} | {m['median_audit_ms']} |")
         lines.append("")
     return "\n".join(lines)
 
@@ -33,7 +35,7 @@ def render(readme: str, results_paths) -> str:
 
 
 def main() -> int:
-    paths = sorted(p for p in glob.glob(os.path.join(ROOT, "runs", "*", "results.json")) if "aborted" not in p and "smoke" not in p)
+    paths = sorted(p for p in glob.glob(os.path.join(ROOT, "runs", "*", "results.json")) if not any(x in p for x in ("aborted", "smoke", "pilot")))
     rp = os.path.join(ROOT, "README.md")
     new = render(open(rp, encoding="utf-8").read(), paths)
     if "--check" in sys.argv:

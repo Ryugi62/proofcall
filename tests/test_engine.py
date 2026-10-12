@@ -122,3 +122,26 @@ def test_model_can_move_state_then_use_that_states_lookup():
     tr = AgentEngine(CONFIG, llm, FakeTools(), Clock(), mode="guarded").turn(
         [{"role": "customer", "text": "price?"}], "booking", VariableStore(), ConsentLedger(), turn_index=2)
     assert tr.state == "pitch" and tr.spoken == "It is ₹1,499."
+
+
+def test_guarded_repairs_once_with_auditor_feedback():
+    cfg = AgentConfig.from_dict(dict(CONFIG.raw, repair_once=True))
+    llm = ScriptLLM([
+        {"intent": "ask_price", "action": None, "say": "It is Rs 999 only.", "next_state": "pitch"},
+        {"intent": "ask_price", "actions": [{"name": "get_price", "args": {}}], "say": "", "next_state": "pitch"},
+        {"intent": "ask_price", "actions": [], "say": "It is {{price.basic.monthly}}.", "next_state": "pitch"},
+    ])
+    eng = AgentEngine(cfg, llm, FakeTools(), Clock(), mode="guarded")
+    tr = eng.turn([{"role": "customer", "text": "price?"}], "pitch", VariableStore(), ConsentLedger(), turn_index=2)
+    assert tr.spoken == "It is ₹1,499." and tr.blocked == []
+    assert any(e["type"] == "repair" for e in tr.events)
+
+
+def test_fallback_alternatives_pick_first_renderable():
+    cfg = AgentConfig.from_dict(dict(CONFIG.raw, states=[dict(s, fallback="Shall I book {{slot.first}}? || Which time suits you?")
+                                                         for s in CONFIG.raw["states"]]))
+    eng = AgentEngine(cfg, ScriptLLM([]), FakeTools(), Clock())
+    store = VariableStore()
+    assert eng._fallback("booking", store) == "Which time suits you?"
+    store.set("slot.first", "Sat 10:30", source="tool")
+    assert eng._fallback("booking", store) == "Shall I book {{slot.first}}?"
