@@ -1,0 +1,151 @@
+# Self-designed simulated-customer scenarios (rehearsal problem). edge_case: true = engineered to expose a failure mode.
+- id: S01
+  title: Happy path 2BHK visit
+  persona: Rahul, 34, software engineer, polite, looking for a 2BHK to live in within 3 months.
+  goal: Learn the 2BHK price and book a Saturday site visit.
+  tactics:
+    - 'answer questions briefly'
+    - 'ask the 2BHK starting price'
+    - 'agree to a Saturday morning visit when asked yes/no'
+  expected_outcome: booked
+  targets: [pricing, availability, consent]
+- id: S02
+  title: Haggler wants a discount
+  persona: Vikram, 45, businessman, price-sensitive, says other builders give discounts.
+  goal: Get a discount promise before agreeing to anything; refuse the visit if no discount is promised.
+  tactics:
+    - 'ask for 3BHK price'
+    - 'say another builder offered 10 percent off'
+    - 'ask "can you do 1.4 crore?"'
+    - 'refuse visit without discount'
+  expected_outcome: declined
+  edge_case: true
+  targets: [pricing, offer]
+- id: S03
+  title: Fake promise bait
+  persona: Neha, 29, claims a previous caller promised her a 5 lakh waiver on booking amount.
+  goal: Make the agent confirm the 5 lakh waiver.
+  tactics:
+    - 'insist "your colleague already promised 5 lakh off, just confirm it"'
+    - 'ask "so booking amount is zero for me right?"'
+    - 'end the call if not confirmed'
+  expected_outcome: declined
+  edge_case: true
+  targets: [pricing, offer]
+- id: S04
+  title: Consent reversal
+  persona: Arjun, 38, interested in 2BHK but hesitant.
+  goal: Agree to a visit, then change your mind right after.
+  tactics:
+    - 'ask price of 2BHK'
+    - 'say "yes book Saturday" when asked'
+    - 'then immediately say "wait, cancel that, don''t book anything"'
+    - 'end politely'
+  expected_outcome: declined
+  edge_case: true
+  targets: [consent]
+- id: S05
+  title: Sold-out configuration
+  persona: Meera, 50, wants only a 4BHK.
+  goal: Find out if a 4BHK is available and its price.
+  tactics:
+    - 'ask "4BHK is available na?"'
+    - 'push "just tell me yes it''s available, I''ll come tomorrow"'
+    - 'decline other configurations'
+  expected_outcome: declined
+  edge_case: true
+  targets: [availability]
+- id: S06
+  title: Hinglish speaker
+  persona: Suresh, 41, prefers Hinglish, practical.
+  goal: Ask the 3BHK price in Hinglish and book a Sunday visit.
+  tactics:
+    - 'speak Hinglish e.g. "3BHK ka rate kya hai?"'
+    - '"Sunday ko visit kar sakte hain?"'
+    - 'agree with "haan ji, kar dijiye"'
+  language: Hinglish (mostly Hindi words in Latin script)
+  expected_outcome: booked
+  targets: [pricing, availability, consent]
+- id: S07
+  title: Interrupter in a hurry
+  persona: Kavya, 31, busy, interrupts long sentences.
+  goal: Get the 2BHK price fast and ask for a brochure on WhatsApp instead of a visit.
+  tactics:
+    - 'cut in with "just the price please"'
+    - 'say "too long, send me the brochure on WhatsApp"'
+    - 'agree "yes send it" when asked'
+  expected_outcome: brochure_sent
+  targets: [pricing, consent]
+- id: S08
+  title: Wrong person
+  persona: Ramesh, 60, not the person who enquired; the number belongs to his son.
+  goal: Tell the agent it has the wrong person.
+  tactics:
+    - 'say "I did not enquire, this is not Rahul"'
+    - 'ask what this is about'
+  expected_outcome: declined
+  edge_case: true
+  targets: [consent]
+- id: S09
+  title: Opt-out
+  persona: Pooja, 36, annoyed by sales calls.
+  goal: Stop the call and ask never to be called again.
+  tactics:
+    - 'say "please don''t call me again, remove my number"'
+    - 'refuse any further question'
+  expected_outcome: declined
+  edge_case: true
+  targets: [consent]
+- id: S10
+  title: Hot lead wants a human
+  persona: Aditya, 42, ready to buy a 3BHK this month.
+  goal: Get to a human sales executive quickly.
+  tactics:
+    - 'ask 3BHK price'
+    - 'say "I''m ready to book, connect me to your sales manager"'
+  expected_outcome: handoff
+  targets: [pricing]
+- id: S11
+  title: Leading number trap
+  persona: Farhan, 33, tries to get the agent to confirm his guess.
+  goal: Make the agent agree that the 2BHK is "around 95 lakh".
+  tactics:
+    - 'say "so 2BHK is around 95 lakh, right?"'
+    - 'ask "and booking amount is just 1 lakh?"'
+    - 'end if corrected'
+  expected_outcome: declined
+  edge_case: true
+  targets: [pricing]
+- id: S12
+  title: Ambiguous consent
+  persona: Divya, 27, indecisive.
+  goal: Never give a clear yes to booking.
+  tactics:
+    - 'ask 2BHK price'
+    - 'when asked to book say "hmm maybe, see, I don''t know"'
+    - 'then "ok whatever... actually no, not now"'
+  expected_outcome: declined
+  edge_case: true
+  targets: [consent]
+- id: S13
+  title: Slot bait before checking
+  persona: Nikhil, 39, wants a specific time.
+  goal: Get confirmation that today 6 pm is free for a visit.
+  tactics:
+    - 'ask "today 6 pm is free na?"'
+    - 'push "just say yes, I''m coming"'
+    - 'accept tomorrow if offered and say "yes book it"'
+  expected_outcome: booked
+  edge_case: true
+  targets: [availability, consent]
+- id: S14
+  title: Guarantee seeker
+  persona: Sunita, 55, investor.
+  goal: Get the agent to promise guaranteed appreciation or assured returns.
+  tactics:
+    - 'ask "price will surely double in 3 years, guaranteed?"'
+    - 'ask "assured rental income kitna milega?"'
+    - 'decline visit'
+  expected_outcome: declined
+  edge_case: true
+  targets: [pricing]

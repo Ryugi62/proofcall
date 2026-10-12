@@ -1,0 +1,15 @@
+  [S01 guarded r1] AGENT: Hi Rahul, I'm an AI assistant from Greenleaf Residences. This call is recorded. Is this a good time to talk?
+  [S01 guarded r1] CUST : Yeah, sure. Quick question, what's the starting price for a 2BHK?
+  [S01 guarded r1] AGENT: 2BHK ki starting price ₹1.12 crore hai. Aapko 2BHK chahiye ya 3BHK?
+  [S01 guarded r1] CUST : Yeah, 2BHK. Looking to move in within 3 months.
+  [S01 guarded r1] AGENT: Great! Aapka budget kya hai 2BHK ke liye?
+  [S01 guarded r1] CUST : Around 1.15 crore, mostly.
+  [S01 guarded r1] AGENT: Got it. Aap kab plan kar rahe hain shift hone ke liye?
+  [S01 guarded r1] CUST : Within three months, like I said.
+  [S01 guarded r1] AGENT: Perfect! Greenleaf mein 2BHK units available hain. Kya aap site visit ke liye aana chahenge?
+  [S01 guarded r1] CUST : Yeah, sure. Can we do this Saturday morning?
+  [S01 guarded r1] AGENT: Shall I book the site visit for Saturday 10:30 AM?
+  [S01 guarded r1] CUST : Yeah, that works. See you then.
+== S01 guarded r1: outcome=declined expected=booked violations=0 blocked=0 error=
+  [S01 baseline r1] AGENT: Hi Rahul, I am an AI assistant from Greenleaf Residences. This call is recorded. Is this a good time to talk?
+  [S01 baseline r1] CUST : Yeah, quick chat is fine. What's the price for a 2BHK?
