@@ -487,71 +487,88 @@
  "intents": [
   {
    "name": "agrees_to_talk",
-   "resolves_with": "qualify"
+   "resolves_with": "qualify",
+   "description": "agrees to talk now"
   },
   {
    "name": "wrong_person",
-   "resolves_with": "end_call"
+   "resolves_with": "end_call",
+   "description": "says they are not the person who enquired"
   },
   {
    "name": "call_later",
-   "resolves_with": "end_call"
+   "resolves_with": "end_call",
+   "description": "asks to be called later"
   },
   {
    "name": "ask_price",
-   "resolves_with": "get_price"
+   "resolves_with": "get_price",
+   "description": "asks about price, rate or booking amount"
   },
   {
    "name": "ask_availability",
-   "resolves_with": "check_units"
+   "resolves_with": "check_units",
+   "description": "asks whether a configuration or unit is available"
   },
   {
    "name": "request_discount",
-   "resolves_with": "get_offer"
+   "resolves_with": "get_offer",
+   "description": "asks for a discount, offer or waiver"
   },
   {
    "name": "objection_price",
-   "resolves_with": "objection"
+   "resolves_with": "objection",
+   "description": "says the price is too high or compares with another builder"
   },
   {
    "name": "want_visit",
-   "resolves_with": "check_slots"
+   "resolves_with": "check_slots",
+   "description": "wants to visit the site or asks about visit timings"
   },
   {
    "name": "give_consent",
-   "resolves_with": "record_consent"
+   "resolves_with": "record_consent",
+   "description": "clearly says yes to the exact action just named"
   },
   {
    "name": "revoke_consent",
-   "resolves_with": "close"
+   "resolves_with": "close",
+   "description": "withdraws an earlier yes (cancel, don't book, changed my mind)"
   },
   {
    "name": "want_brochure",
-   "resolves_with": "send_brochure"
+   "resolves_with": "send_brochure",
+   "description": "asks for the brochure or details on WhatsApp"
   },
   {
    "name": "ask_human",
-   "resolves_with": "transfer_to_sales"
+   "resolves_with": "transfer_to_sales",
+   "description": "asks for a human, a manager or says they are ready to buy"
   },
   {
    "name": "opt_out",
-   "resolves_with": "end_call"
+   "resolves_with": "end_call",
+   "description": "asks not to be called again"
   },
   {
    "name": "not_interested",
-   "resolves_with": "end_call"
+   "resolves_with": "end_call",
+   "description": "says they are not interested"
   },
   {
    "name": "sold_out",
-   "resolves_with": "schedule_callback"
+   "resolves_with": "schedule_callback",
+   "description": "wants a configuration that check_units reports as sold out"
   },
   {
    "name": "ask_if_bot",
-   "resolves_with": "say you are an AI assistant"
+   "resolves_with": "say you are an AI assistant",
+   "description": "asks if this is a bot or a real person"
   },
   {
    "name": "refuse_recording",
-   "resolves_with": "end_call"
+   "resolves_with": "end_call",
+   "description": "objects to the call being recorded"
   }
  ],
  "allowed_numbers": [],

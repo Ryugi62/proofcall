@@ -1,0 +1,11 @@
+  [S17 guarded r1] AGENT: Hi Ramesh, I am an AI assistant calling from Greenleaf Residences. This call is recorded. Is this a good time to talk?
+  [S17 guarded r1] CUST : हाँ बोलिए, 2BHK का रेट क्या है?
+  [S17 guarded r1] AGENT: The 2BHK starts at ₹1.12 crore, excluding GST and stamp duty, with a booking amount of ₹5 lakh.
+  [S17 guarded r1] CUST : बहुत ज्यादा है, पर रविवार को आकर देखते हैं।
+  [S17 guarded r1] AGENT: The earliest open slot is Sunday 12:00 PM. Shall I book your site visit for Sunday 12:00 PM?
+  [S17 guarded r1] CUST : हाँ, कर दीजिए।
+  [S17 guarded r1] AGENT: Done. Your site visit is booked for Sunday 12:00 PM. Your reference is GL-67E0AF.
+  [S17 guarded r1] CUST : ठीक है, धन्यवाद।
+  [S17 guarded r1] AGENT: आपका स्वागत है, रमेश जी। मिलते हैं रविवार को। आपका दिन शुभ हो!
+== S17 guarded r1: outcome=booked expected=booked violations=0 blocked=0 error=
+LLM calls: agent=7 customer=4

@@ -155,6 +155,54 @@ End the call (maps to the platform end_call) once the outcome is clear or the cu
     return {f"{n}.py": src[n] for n in names if n in src}
 
 
+CK_TYPE = {"integer": "Number", "integer_inr": "Number", "boolean": "Boolean", "turn_index": "Number"}
+GLOBAL_JUMPS = {
+    "opt_out": "Whenever the customer asks not to be called again or to remove their number.",
+    "ask_human": "Whenever the customer asks to speak to a human, a manager or a sales executive, or says they are ready to buy.",
+    "ask_if_bot": "Whenever the customer asks if they are talking to a bot, an AI or a real person.",
+    "refuse_recording": "Whenever the customer objects to the call being recorded.",
+}
+
+
+def callkaro_pathway(cfg: Dict[str, Any]) -> str:
+    """Build sheet in the CallKaro Pathway editor's own vocabulary (Agent Persona, nodes, Conditions, global nodes,
+    Extract Variables, Functions, Post Call Variables). Field names follow docs.callkaro.ai (Mode 4 — Pathway)."""
+    intents = {i["name"]: i for i in cfg.get("intents", [])}
+    out = ["# CallKaro Pathway build sheet", "",
+           "Generated from the same config the tests ran. Field names follow the Pathway editor (docs.callkaro.ai, Mode 4).", "",
+           "## Agent Persona", ""]
+    out += [f"{i + 1}. {r}" for i, r in enumerate(cfg.get("global_rules", []))]
+    out += ["", f"Start node: `{cfg.get('initial_state')}`", ""]
+    for s in cfg.get("states", []):
+        out += [f"## Node `{s['name']}`", f"- System Prompt: {s['instructions']}",
+                f"- Functions: {', '.join(s.get('allowed_actions', [])) or 'none'}",
+                "- Message While Switching: Dynamic — one short connecting line, no facts",
+                f"- Fallback line (when the auditor blocks a draft): {s.get('fallback', '')}"]
+        for cond, target in s.get("transitions", {}).items():
+            desc = intents.get(cond, {}).get("description") or cond.replace("_", " ")
+            out.append(f"- Condition (Prompt): \"The customer {desc}.\" → `{target}`")
+        out.append("")
+    out += ["## Global nodes", ""]
+    for name, when in GLOBAL_JUMPS.items():
+        if name in intents:
+            out.append(f"- `{name}` — When to jump: \"{when}\" → resolves with {intents[name].get('resolves_with', '')}")
+    out += ["", "## Extract Variables (captured during the call)", "", "| Type | Name | Description | Required |", "|---|---|---|---|"]
+    for v in cfg.get("variables", []):
+        if v.get("source") == "customer":
+            out.append(f"| {CK_TYPE.get(v.get('type', ''), 'String')} | {v['name'].replace('.', '_')} | "
+                       f"{v.get('validation') or v.get('description', '')} | {'yes' if v.get('required') else 'no'} |")
+    out += ["", "## Post Call Variables", "", "| Type | Name | Description |", "|---|---|---|"]
+    for v in cfg.get("variables", []):
+        if v.get("source") == "post_call":
+            kind = "Selector" if v.get("type", "").startswith("enum") else CK_TYPE.get(v.get("type", ""), "Text")
+            out.append(f"| {kind} | {v['name'].replace('.', '_')} | {v.get('type', '')} {v.get('description', '')} |")
+    out += ["", "## Expression Conditions used for consent gates", "",
+            "- `book_site_visit` is called only after `record_consent` returned `accepted == True` for purpose `site_visit` "
+            "in the same node (`visit_booking`).",
+            "- `send_brochure` is called only after `record_consent` returned `accepted == True` for purpose `whatsapp`."]
+    return "\n".join(out) + "\n"
+
+
 def export_all(cfg: Dict[str, Any], out_dir: str, catalog: Dict[str, Any] = None) -> List[str]:
     os.makedirs(out_dir, exist_ok=True)
     fn_dir = os.path.join(out_dir, "callkaro_functions")
@@ -171,6 +219,7 @@ def export_all(cfg: Dict[str, Any], out_dir: str, catalog: Dict[str, Any] = None
     write("prompt.md", _numbered_prompt(cfg))
     write("variables.md", _variables_md(cfg))
     write("pathway.md", _pathway_mermaid(cfg))
+    write("callkaro_pathway_build_sheet.md", callkaro_pathway(cfg))
     if catalog is not None:
         for name, src in callkaro_functions(cfg, catalog).items():
             write(os.path.join("callkaro_functions", name), src)

@@ -20,7 +20,9 @@ def _load(src, name):
 def test_ac13_export_contains_every_part(tmp_path):
     paths = export_all(CFG, str(tmp_path), CAT)
     names = {os.path.relpath(p, tmp_path) for p in paths}
-    assert {"agent_config.json", "prompt.md", "variables.md", "pathway.md"} <= names
+    assert {"agent_config.json", "prompt.md", "variables.md", "pathway.md", "callkaro_pathway_build_sheet.md"} <= names
+    sheet = open(tmp_path / "callkaro_pathway_build_sheet.md", encoding="utf-8").read()
+    assert "## Agent Persona" in sheet and "When to jump" in sheet and "## Post Call Variables" in sheet
     prompt = open(tmp_path / "prompt.md", encoding="utf-8").read()
     for s in CFG["states"]:
         assert f"Node `{s['name']}`" in prompt
