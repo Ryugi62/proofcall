@@ -188,7 +188,8 @@
    "transitions": {
     "booked": "close",
     "declines": "objection",
-    "revoke_consent": "close"
+    "revoke_consent": "close",
+    "want_brochure": "followup"
    },
    "fallback": "Shall I book your site visit for {{check_slots.first_slot}}? || Which day and time should I check for your visit?",
    "fallback_hi": "Kya main aapka site visit {{check_slots.first_slot}} ke liye book kar doon? || Visit ke liye kaunsa din aur time check karoon?"
@@ -222,7 +223,9 @@
     "schedule_callback",
     "cancel_booking"
    ],
-   "transitions": {},
+   "transitions": {
+    "want_brochure": "followup"
+   },
    "fallback": "Thank you for your time. Have a good day.",
    "fallback_hi": "Aapke samay ke liye dhanyavaad. Aapka din shubh ho."
   }

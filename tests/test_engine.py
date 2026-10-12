@@ -190,3 +190,14 @@ def test_fisher_exact_matches_known_values():
     from proofcall.application.simulate import fisher_exact
     assert fisher_exact(3, 1, 1, 3) == 0.4857      # classic tea-tasting table
     assert fisher_exact(0, 6, 0, 6) == 1.0
+
+
+def test_action_owned_by_a_connected_node_moves_the_call_there():
+    cfg = AgentConfig.from_dict(dict(CONFIG.raw, states=[
+        dict(CONFIG.raw["states"][0], transitions={"want_visit": "booking"}), CONFIG.raw["states"][1]]))
+    ledger = ConsentLedger()
+    ledger.record("booking", "yes", last_customer_text="yes")
+    llm = ScriptLLM([{"intent": "want_visit", "actions": [{"name": "book_slot", "args": {}}], "say": "Done.", "next_state": "pitch"}])
+    store = VariableStore()
+    tr = AgentEngine(cfg, llm, FakeTools(), Clock(), mode="guarded").turn([{"role": "customer", "text": "yes"}], "pitch", store, ledger, 4)
+    assert tr.state == "booking" and store.get("booking.id") == "BK-1"

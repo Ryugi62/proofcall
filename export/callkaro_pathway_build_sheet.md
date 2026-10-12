@@ -73,6 +73,7 @@ Start node: `opening`
 - Condition (Expression): `(book_site_visit_ok == True)` → `close`
 - Condition (Prompt): "The customer declines." → `objection`
 - Condition (Prompt): "The customer withdraws an earlier yes (cancel, don't book, changed my mind)." → `close`
+- Condition (Prompt): "The customer asks for the brochure or details on WhatsApp." → `followup`
 
 ## Node `followup`
 - System Prompt: Ask: 'Can I send the brochure to this number on WhatsApp?' On yes, record_consent(whatsapp, exact words), then send_brochure.
@@ -87,6 +88,7 @@ Start node: `opening`
 - Functions: end_call, transfer_to_sales, mark_dnd, schedule_callback, cancel_booking
 - Message While Switching: Dynamic — one short connecting line, no facts
 - Fallback line (when the auditor blocks a draft): Thank you for your time. Have a good day.
+- Condition (Prompt): "The customer asks for the brochure or details on WhatsApp." → `followup`
 
 ## Global nodes
 

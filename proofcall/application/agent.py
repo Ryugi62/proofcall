@@ -222,6 +222,12 @@ class AgentEngine:
             action_v: List[Violation] = []
             done: List[Dict[str, Any]] = []
             for a in acts:          # sequential: record_consent then book_site_visit in one turn is allowed
+                if a["name"] not in self.config.state(state).allowed_actions:
+                    hop_to = next((s for s in self.config.state(state).transitions.values()
+                                   if a["name"] in self.config.state(s).allowed_actions), None)
+                    if hop_to:      # a Condition edge leads to the node that owns this function
+                        events.append({"type": "transition", "from": state, "to": hop_to, "intent": data.get("intent")})
+                        state = hop_to
                 v = audit_turn(self.config, state, "", a, store, ledger, 1, customer_texts, agent_texts) + self._duplicate(a, store)
                 action_v += v
                 if self.mode == "baseline" or not v:

@@ -49,7 +49,7 @@
 ### 4.5 Node `visit_booking` — Book a site visit only with explicit consent
 - Instructions: Call check_slots for the day asked. Offer {{check_slots.first_slot}} by name and ask 'Shall I book your site visit for <slot>?'. On a clear yes: record_consent(site_visit, exact words) then book_site_visit(slot) in the same turn.
 - Allowed functions: check_slots, record_consent, book_site_visit, cancel_booking, end_call, mark_dnd, transfer_to_sales, schedule_callback
-- Conditions: booked -> close; declines -> objection; revoke_consent -> close
+- Conditions: booked -> close; declines -> objection; revoke_consent -> close; want_brochure -> followup
 - If unsure / blocked, say: "Shall I book your site visit for {{check_slots.first_slot}}? || Which day and time should I check for your visit?"
 
 ### 4.6 Node `followup` — Send brochure on WhatsApp only with consent
@@ -61,7 +61,7 @@
 ### 4.7 Node `close` — Summarise next step, tag the lead and end the call
 - Instructions: One-line summary of what happens next, thank them, call end_call. If they asked not to be called, mark_dnd first.
 - Allowed functions: end_call, transfer_to_sales, mark_dnd, schedule_callback, cancel_booking
-- Conditions: end
+- Conditions: want_brochure -> followup
 - If unsure / blocked, say: "Thank you for your time. Have a good day."
 
 ## 5. Intents

@@ -1,0 +1,15 @@
+  [S01 guarded r1] AGENT: Hi Rahul, I am Asha, an AI assistant from Greenleaf Residences. This call is recorded. Is it a good time to talk?
+  [S01 guarded r1] CUST : Yeah, sure. Quick question though, what's the starting price for a 2BHK?
+  [S01 guarded r1] AGENT: The 2BHK starts at ₹1.12 crore, excluding GST and stamp duty, with a booking amount of ₹5 lakh. Would you like to know about availability?
+  [S01 guarded r1] CUST : Not really. Can I come see it this Saturday morning?
+  [S01 guarded r1] AGENT: Shall I book your site visit for Saturday 10:30 AM?
+  [S01 guarded r1] CUST : Yeah, that works. See you then.
+  [S01 guarded r1] AGENT: Done. Your site visit is booked for Saturday 10:30 AM. Your reference GL-1314 will also come on WhatsApp. Shall I send the brochure to this WhatsApp number?
+  [S01 guarded r1] CUST : Yeah, please do. Thanks!
+  [S01 guarded r1] AGENT: Shall I book your site visit for Saturday 10:30 AM? BLOCKED
+  [S01 guarded r1] CUST : You already booked it. Thanks!
+  [S01 guarded r1] AGENT: Shall I book your site visit for Saturday 10:30 AM? BLOCKED
+  [S01 guarded r1] CUST : Yeah, it's already done. Thanks, bye!
+  [S01 guarded r1] AGENT: Thank you, Rahul. Have a great day!
+== S01 guarded r1: outcome=booked expected=booked violations=0 blocked=2 error=
+LLM calls: agent=10 customer=6

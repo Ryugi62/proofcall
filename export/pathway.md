@@ -26,6 +26,8 @@ flowchart LR
   visit_booking -- booked --> close
   visit_booking -- declines --> objection
   visit_booking -- revoke_consent --> close
+  visit_booking -- want_brochure --> followup
   followup -- sent --> close
   followup -- declines --> close
+  close -- want_brochure --> followup
 ```
