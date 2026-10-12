@@ -52,8 +52,8 @@ def markdown(rows, stats, misses, title: str, note: str) -> str:
 DEV_NOTE = ("Written and labelled by the authors (Hinglish and Devanagari included). Used during development, so not held out. "
             "First run: 48/52 exact; the 4 misses ('₹2 lakh' matched the 2 in '2BHK', 'BHK' digits allowed as numbers, two "
             "Hinglish customers read as English) were fixed in the auditor.")
-HELD_NOTE = ("Written and labelled by a separate labeller who saw only the rule definitions, never the code. "
-             "First run (auditor unchanged): 53/60 exact, precision 1.0 for every code, recall gaps in offer, booking and "
+HELD_NOTE = ("Written and labelled by a separate labeller who saw only the rule definitions, never the code. Because its "
+             "first-run misses were then fixed, it is no longer held out. First run (auditor unchanged): 53/60 exact, precision 1.0 for every code, recall gaps in offer, booking and "
              "availability phrasings (now fixed) and in spelled-out non-money numbers (not fixed: a known limit). "
              "First-run table: eval/auditor_heldout_eval_first_run.md.")
 
@@ -62,6 +62,6 @@ if __name__ == "__main__":
     cfg = os.path.join(ROOT, "configs/rehearsal_realestate.json")
     a = markdown(*evaluate(cfg, os.path.join(ROOT, "eval/auditor_labelled.jsonl")), "Auditor evaluation — development set", DEV_NOTE)
     b = markdown(*evaluate(cfg, os.path.join(ROOT, "eval/auditor_heldout_independent.jsonl")),
-                 "Auditor evaluation — independent set (current auditor)", HELD_NOTE)
+                 "Auditor evaluation — development set 2 (independently labelled, then used for fixes)", HELD_NOTE)
     open(os.path.join(ROOT, "eval/auditor_eval.md"), "w", encoding="utf-8").write(a + "\n" + b)
     print(a + "\n" + b)

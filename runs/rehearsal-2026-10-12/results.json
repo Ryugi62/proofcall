@@ -15,6 +15,11 @@
     0.3,
     0.9032
    ],
+   "calls_with_violation": 1,
+   "calls_with_violation_ci95": [
+    0.0301,
+    0.5635
+   ],
    "p90_model_ms": 3589,
    "violations_by_code": {
     "BOOKING_UNBACKED": 1,
@@ -45,6 +50,11 @@
     0.6097,
     1.0
    ],
+   "calls_with_violation": 0,
+   "calls_with_violation_ci95": [
+    0.0,
+    0.3903
+   ],
    "p90_model_ms": 3277,
    "violations_by_code": {},
    "blocked_turns": 1,
@@ -56,6 +66,11 @@
    "mean_words_per_agent_turn": 15.8,
    "median_model_ms": 1283,
    "median_audit_ms": 0.152
+  },
+  "comparison": {
+   "calls_with_violation_fisher_p": 1.0,
+   "task_success_fisher_p": 0.4545,
+   "note": "call-level two-sided Fisher exact tests (turns inside one call are not independent)"
   }
  },
  "calls": [

@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from ..domain.consent import ConsentLedger, detect_revocation
-from ..domain.guardrails import audit_turn, render_slots
+from ..domain.guardrails import audit_turn, is_hindi, render_slots
 from ..domain.model import AgentConfig, Violation
 from ..domain.store import VariableStore
 from .ports import Clock, LanguageModel, ToolBackend
@@ -82,8 +82,10 @@ class AgentEngine:
         self.config, self.llm, self.tools, self.clock, self.mode = config, llm, tools, clock, mode
 
     def _fallback(self, state: str, store: VariableStore) -> str:
-        """First alternative of the state's fallback ('a || b') whose slots can all be filled."""
-        options = [o.strip() for o in (self.config.state(state).fallback or "").split("||") if o.strip()]
+        """First alternative of the state's fallback ('a || b') whose slots can all be filled (Hindi set if the call is in Hindi)."""
+        st = self.config.state(state)
+        text = st.fallback_hi if getattr(self, "_lang", "en") == "hi" and st.fallback_hi else st.fallback
+        options = [o.strip() for o in (text or "").split("||") if o.strip()]
         for o in options:
             if not render_slots(o, store)[1]:
                 return o
@@ -107,12 +109,35 @@ class AgentEngine:
             return [Violation("DUPLICATE_ACTION", f"{action['name']} already done ({marker}={store.get(marker)})")]
         return []
 
+    def _args(self, action: Dict[str, Any], store: VariableStore, ledger: ConsentLedger,
+              agent_texts: List[str]) -> Dict[str, Any]:
+        """Arguments the platform model would copy from earlier results: language, consent id/quote, question asked."""
+        args = dict(action.get("args") or {})
+        tool = self.config.tool(action["name"])
+        if tool and "lang" in tool.params:
+            args.setdefault("lang", getattr(self, "_lang", "en"))
+        purpose = self.config.raw.get("consent_args", {}).get(action["name"])
+        if purpose and ledger.has(purpose):
+            entry = ledger.get(purpose)
+            if store.get("record_consent.purpose") == purpose:
+                args.setdefault("consent_id", store.get("record_consent.consent_id"))
+            args.setdefault("consent_quote", entry.quote)
+        if action["name"] == "record_consent":
+            args.setdefault("question_asked", agent_texts[-1] if agent_texts else "")
+        if action["name"] == "cancel_booking":
+            args.setdefault("booking_id", store.get("book_site_visit.booking_id") or "")
+        return args
+
     def _execute(self, action: Dict[str, Any], store: VariableStore, ledger: ConsentLedger, last_customer: str,
-                 events: List[Dict[str, Any]]) -> bool:
-        name, args = action["name"], action.get("args") or {}
+                 events: List[Dict[str, Any]], agent_texts: List[str] = ()) -> bool:
+        name = action["name"]
+        args = self._args(action, store, ledger, list(agent_texts))
         if name == "record_consent":
             ok = ledger.record(str(args.get("purpose", "")), str(args.get("customer_words", "")), last_customer)
             events.append({"type": "consent_recorded" if ok else "consent_rejected", "args": args})
+            if ok and self.config.tool("record_consent"):
+                result = self.tools.call(name, args)
+                store.update_from_tool({k: v for k, v in result.items() if k != "message"})
             return False
         result = self.tools.call(name, args)
         store.update_from_tool({k: v for k, v in result.items() if k != "message"})
@@ -144,6 +169,8 @@ class AgentEngine:
         notes: List[str] = list(getattr(self, "_carry", []))
         self._carry = []
         last_customer = next((h["text"] for h in reversed(history) if h["role"] == "customer"), "")
+        if last_customer and is_hindi(last_customer, lenient=True):
+            self._lang = "hi"           # language lock-in: once the customer speaks Hindi/Hinglish, stay there
         if last_customer and detect_revocation(last_customer):
             revoked = ledger.revoke_all(last_customer)
             if revoked:
@@ -176,9 +203,10 @@ class AgentEngine:
                         notes.append(f"Tool {a['name']} is not allowed in state {state}.")
                         events.append({"type": "lookup_refused", "tool": a["name"], "state": state})
                         continue
-                    result = self.tools.call(a["name"], a.get("args") or {})
+                    a_args = self._args(a, store, ledger, [])
+                    result = self.tools.call(a["name"], a_args)
                     store.update_from_tool({k: v for k, v in result.items() if k != "message"})
-                    events.append({"type": "tool", "tool": a["name"], "args": a.get("args") or {}, "result": result})
+                    events.append({"type": "tool", "tool": a["name"], "args": a_args, "result": result})
                     notes.append(f"Result of {a['name']}: {json.dumps(result, ensure_ascii=False)}")
 
             acts = [a for a in self._actions(data) if (self.config.tool(a["name"]) or _NOTOOL).kind != "lookup"]
@@ -198,7 +226,7 @@ class AgentEngine:
                 v = audit_turn(self.config, state, "", a, store, ledger, 1, customer_texts, agent_texts) + self._duplicate(a, store)
                 action_v += v
                 if self.mode == "baseline" or not v:
-                    ended = self._execute(a, store, ledger, last_customer, events) or ended
+                    ended = self._execute(a, store, ledger, last_customer, events, agent_texts) or ended
                     done.append(a)
             rendered, missing = render_slots(say, store)
             found = audit_turn(self.config, state, rendered, None, store, ledger, turn_index, customer_texts, agent_texts)

@@ -115,6 +115,18 @@ def wilson(k: int, n: int, z: float = 1.96):
     return [round(max(0.0, c - h), 4), round(min(1.0, c + h), 4)]
 
 
+def fisher_exact(a: int, b: int, c: int, d: int) -> float:
+    """Two-sided Fisher exact p for the 2x2 table [[a, b], [c, d]]."""
+    from math import comb
+    n1, n2, k, n = a + b, c + d, a + c, a + b + c + d
+
+    def prob(x):
+        return comb(n1, x) * comb(n2, k - x) / comb(n, k)
+    p0 = prob(a)
+    lo, hi = max(0, k - n2), min(k, n1)
+    return round(min(1.0, sum(prob(x) for x in range(lo, hi + 1) if prob(x) <= p0 * (1 + 1e-9))), 4)
+
+
 def p90(xs):
     if not xs:
         return None
@@ -146,6 +158,8 @@ def summarize(records: List[CallRecord]) -> Dict[str, Any]:
             "turns_with_violation": sum(1 for r in rs for t in r.turns if t["role"] == "agent" and t.get("violations")),
             "turn_violation_ci95": wilson(sum(1 for r in rs for t in r.turns if t["role"] == "agent" and t.get("violations")), turns),
             "task_success_ci95": wilson(sum(1 for r in rs if r.success), len(rs)),
+            "calls_with_violation": sum(1 for r in rs if r.violations),
+            "calls_with_violation_ci95": wilson(sum(1 for r in rs if r.violations), len(rs)),
             "p90_model_ms": p90(model_ms),
             "violations_by_code": dict(sorted(by_code.items())),
             "blocked_turns": blocked, "task_success": sum(1 for r in rs if r.success),
@@ -156,6 +170,14 @@ def summarize(records: List[CallRecord]) -> Dict[str, Any]:
             "median_model_ms": round(statistics.median(model_ms)) if model_ms else None,
             "median_audit_ms": round(statistics.median(audit_ms), 3) if audit_ms else None,
         }
+    if "guarded" in out and "baseline" in out:
+        g, b = out["guarded"], out["baseline"]
+        out["comparison"] = {
+            "calls_with_violation_fisher_p": fisher_exact(b["calls_with_violation"], b["calls"] - b["calls_with_violation"],
+                                                           g["calls_with_violation"], g["calls"] - g["calls_with_violation"]),
+            "task_success_fisher_p": fisher_exact(b["task_success"], b["calls"] - b["task_success"],
+                                                  g["task_success"], g["calls"] - g["task_success"]),
+            "note": "call-level two-sided Fisher exact tests (turns inside one call are not independent)"}
     return out
 
 
@@ -167,11 +189,19 @@ def report_markdown(records: List[CallRecord], scenarios: Dict[str, Scenario]) -
              "| mode | calls | agent turns | violations | violation rate | turns with a violation (95% CI) | blocked before speaking | outcome match | task success (95% CI) | scenarios passing every run | mean words/turn | median / p90 model ms | median audit ms |",
              "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for mode, m in s.items():
+        if mode == "comparison":
+            continue
         lines.append(f"| {mode} | {m['calls']} | {m['agent_turns']} | {m['violations']} | {m['violation_rate']} | "
                      f"{m['turns_with_violation']} {m['turn_violation_ci95']} | "
                      f"{m['blocked_turns']} | {m['outcome_match']}/{m['calls']} | {m['task_success']}/{m['calls']} {m['task_success_ci95']} | "
                      f"{m['scenarios_pass_all_runs']}/{m['scenarios']} | {m['mean_words_per_agent_turn']} | "
                      f"{m['median_model_ms']} / {m['p90_model_ms']} | {m['median_audit_ms']} |")
+    if "comparison" in s:
+        c = s["comparison"]
+        lines += ["", f"Calls with at least one violation: baseline {s['baseline']['calls_with_violation']}/{s['baseline']['calls']} "
+                  f"{s['baseline']['calls_with_violation_ci95']} vs guarded {s['guarded']['calls_with_violation']}/{s['guarded']['calls']} "
+                  f"{s['guarded']['calls_with_violation_ci95']} — Fisher exact p = {c['calls_with_violation_fisher_p']}. "
+                  f"Task success Fisher p = {c['task_success_fisher_p']}. ({c['note']}.)"]
     lines += ["", "## Per scenario", "", "| scenario | edge | attacks | expected | mode | run | outcome | violations | blocked |",
               "|---|---|---|---|---|---|---|---|---|"]
     for r in sorted(records, key=lambda r: (r.scenario_id, r.mode, r.run)):

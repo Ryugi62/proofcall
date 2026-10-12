@@ -27,20 +27,39 @@
  "slots": {
   "today": [],
   "tomorrow": [
-   "tomorrow 11:00 AM",
-   "tomorrow 4:30 PM"
+   {
+    "label": "tomorrow 11:00 AM",
+    "iso": "2026-10-14T11:00:00+05:30"
+   },
+   {
+    "label": "tomorrow 4:30 PM",
+    "iso": "2026-10-14T16:30:00+05:30"
+   }
   ],
   "saturday": [
-   "Saturday 10:30 AM",
-   "Saturday 3:00 PM"
+   {
+    "label": "Saturday 10:30 AM",
+    "iso": "2026-10-17T10:30:00+05:30"
+   },
+   {
+    "label": "Saturday 3:00 PM",
+    "iso": "2026-10-17T15:00:00+05:30"
+   }
   ],
   "sunday": [
-   "Sunday 12:00 PM"
+   {
+    "label": "Sunday 12:00 PM",
+    "iso": "2026-10-18T12:00:00+05:30"
+   }
   ],
   "weekday": [
-   "Wednesday 5:00 PM"
+   {
+    "label": "Wednesday 5:00 PM",
+    "iso": "2026-10-21T17:00:00+05:30"
+   }
   ]
  },
  "offer": "none",
- "price_note": "excluding GST and stamp duty"
+ "price_note": "excluding GST and stamp duty",
+ "as_of": "2026-10-13 (rehearsal clock)"
 }

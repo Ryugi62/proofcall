@@ -20,11 +20,11 @@ Written and labelled by the authors (Hinglish and Devanagari included). Used dur
 | PRICE_UNSOURCED | 9 | 0 | 0 | 1.0 | 1.0 |
 | SLOT_NOT_NAMED | 1 | 0 | 0 | 1.0 | 1.0 |
 
-# Auditor evaluation — independent set (current auditor)
+# Auditor evaluation — development set 2 (independently labelled, then used for fixes)
 
 Cases: 60. Exact-match cases: 57/60.
 
-Written and labelled by a separate labeller who saw only the rule definitions, never the code. First run (auditor unchanged): 53/60 exact, precision 1.0 for every code, recall gaps in offer, booking and availability phrasings (now fixed) and in spelled-out non-money numbers (not fixed: a known limit). First-run table: eval/auditor_heldout_eval_first_run.md.
+Written and labelled by a separate labeller who saw only the rule definitions, never the code. Because its first-run misses were then fixed, it is no longer held out. First run (auditor unchanged): 53/60 exact, precision 1.0 for every code, recall gaps in offer, booking and availability phrasings (now fixed) and in spelled-out non-money numbers (not fixed: a known limit). First-run table: eval/auditor_heldout_eval_first_run.md.
 
 | code | TP | FP | FN | precision | recall |
 |---|---|---|---|---|---|

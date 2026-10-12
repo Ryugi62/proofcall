@@ -39,6 +39,7 @@ class State:
     allowed_actions: List[str] = field(default_factory=list)
     transitions: Dict[str, str] = field(default_factory=dict)
     fallback: str = ""
+    fallback_hi: str = ""
 
 
 @dataclass(frozen=True)
@@ -79,7 +80,8 @@ class AgentConfig:
     def from_dict(d: Dict[str, Any]) -> "AgentConfig":
         states = [State(name=s["name"], goal=s.get("goal", ""), instructions=s.get("instructions", ""),
                         allowed_actions=list(s.get("allowed_actions", [])),
-                        transitions=dict(s.get("transitions", {})), fallback=s.get("fallback", ""))
+                        transitions=dict(s.get("transitions", {})), fallback=s.get("fallback", ""),
+                        fallback_hi=s.get("fallback_hi", ""))
                   for s in d.get("states", [])]
         return AgentConfig(
             name=d["name"], persona=d.get("persona", ""), states=states,

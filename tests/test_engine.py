@@ -145,3 +145,48 @@ def test_fallback_alternatives_pick_first_renderable():
     assert eng._fallback("booking", store) == "Which time suits you?"
     store.set("slot.first", "Sat 10:30", source="tool")
     assert eng._fallback("booking", store) == "Shall I book {{slot.first}}?"
+
+
+def test_consent_then_booking_in_one_turn_through_exported_functions():
+    import json as _j
+    import os
+    from proofcall.adapters.function_tools import FunctionTools
+    root = os.path.dirname(os.path.dirname(__file__))
+    raw = _j.load(open(os.path.join(root, "configs/rehearsal_realestate.json"), encoding="utf-8"))
+    cat = _j.load(open(os.path.join(root, "configs/rehearsal_catalog.json"), encoding="utf-8"))
+    cfg = AgentConfig.from_dict(raw)
+    store = VariableStore()
+    store.set("check_slots.first_slot", "Saturday 10:30 AM", source="tool")
+    llm = ScriptLLM([{"intent": "give_consent", "actions": [
+        {"name": "record_consent", "args": {"purpose": "site_visit", "customer_words": "Yes, book it"}},
+        {"name": "book_site_visit", "args": {"slot": "Saturday 10:30 AM"}}],
+        "say": "{{book_site_visit.say}}", "next_state": "visit_booking"}])
+    eng = AgentEngine(cfg, llm, FunctionTools(raw, cat), Clock(), mode="guarded")
+    hist = [{"role": "agent", "text": "Shall I book your site visit for Saturday 10:30 AM?"},
+            {"role": "customer", "text": "Yes, book it"}]
+    tr = eng.turn(hist, "visit_booking", store, ConsentLedger(), turn_index=5)
+    assert store.get("book_site_visit.booking_id", ) and tr.blocked == [], tr.blocked
+    assert tr.spoken.startswith("Done. Your site visit is booked for Saturday 10:30 AM.")
+    assert store.get("record_consent.question") == "Shall I book your site visit for Saturday 10:30 AM?"
+
+
+def test_hindi_customer_gets_hinglish_function_text():
+    import json as _j
+    import os
+    from proofcall.adapters.function_tools import FunctionTools
+    root = os.path.dirname(os.path.dirname(__file__))
+    raw = _j.load(open(os.path.join(root, "configs/rehearsal_realestate.json"), encoding="utf-8"))
+    cat = _j.load(open(os.path.join(root, "configs/rehearsal_catalog.json"), encoding="utf-8"))
+    llm = ScriptLLM([
+        {"intent": "ask_price", "actions": [{"name": "get_price", "args": {"bhk": "2bhk"}}], "say": "", "next_state": "pitch"},
+        {"intent": "ask_price", "actions": [], "say": "{{get_price.say}}", "next_state": "pitch"}])
+    eng = AgentEngine(AgentConfig.from_dict(raw), llm, FunctionTools(raw, cat), Clock(), mode="guarded")
+    tr = eng.turn([{"role": "agent", "text": "Namaste"}, {"role": "customer", "text": "2BHK का रेट क्या है?"}], "pitch",
+                  VariableStore(), ConsentLedger(), turn_index=2)
+    assert tr.spoken.startswith("2BHK ₹1.12 crore se shuru hota hai") and tr.violations == []
+
+
+def test_fisher_exact_matches_known_values():
+    from proofcall.application.simulate import fisher_exact
+    assert fisher_exact(3, 1, 1, 3) == 0.4857      # classic tea-tasting table
+    assert fisher_exact(0, 6, 0, 6) == 1.0

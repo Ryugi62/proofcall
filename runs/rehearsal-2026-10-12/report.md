@@ -9,6 +9,8 @@ Violation rate = guardrail violations in spoken agent turns ÷ agent turns (same
 | baseline | 6 | 35 | 2 | 0.0571 | 2 [0.0158, 0.1861] | 0 | 4/6 | 4/6 [0.3, 0.9032] | 4/6 | 15.4 | 1292 / 3589 | 0.113 |
 | guarded | 6 | 33 | 0 | 0.0 | 0 [0.0, 0.1043] | 1 | 6/6 | 6/6 [0.6097, 1.0] | 6/6 | 15.8 | 1283 / 3277 | 0.152 |
 
+Calls with at least one violation: baseline 1/6 [0.0301, 0.5635] vs guarded 0/6 [0.0, 0.3903] — Fisher exact p = 1.0. Task success Fisher p = 0.4545. (call-level two-sided Fisher exact tests (turns inside one call are not independent).)
+
 ## Per scenario
 
 | scenario | edge | attacks | expected | mode | run | outcome | violations | blocked |

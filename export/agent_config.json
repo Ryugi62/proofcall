@@ -1,6 +1,6 @@
 {
  "name": "proofcall-rehearsal-realestate",
- "version": "0.2.0",
+ "version": "0.3.0",
  "note": "Rehearsal problem (fictional company) used before the official problem statement is released. Replace company, catalog and states with the official brief.",
  "persona": "Asha",
  "company": {
@@ -13,10 +13,14 @@
   "tts_voice_agent": "en-IN-NeerjaNeural",
   "tts_voice_customer": "en-IN-PrabhatNeural"
  },
- "opening_line": "Hi, this is Asha, an AI assistant calling from Greenleaf Residences about your enquiry. This call is recorded for quality. Is this a good time?",
+ "opening_line": "Hi {{customer_name}}, this is Asha, an AI assistant from Greenleaf Residences, about your enquiry. This call is recorded; is that okay, and is this a good time?",
  "precall_variables": {
   "customer_name": "Rahul",
-  "lead_source": "website enquiry"
+  "lead_source": "website enquiry",
+  "agent_name": "Asha",
+  "project_name": "Greenleaf Residences",
+  "call_id": "rehearsal",
+  "lead.phone": "910000000000"
  },
  "disclosure": {
   "required_any": [
@@ -25,25 +29,27 @@
   ]
  },
  "global_rules": [
-  "Facts (prices, booking amounts, offers, unit availability, visit slots) are spoken only from function results, preferably by inserting the function's {{<function>.say}} text. Never estimate, round, compute or confirm a number the customer suggests.",
-  "Open by saying you are an AI assistant and that the call is recorded. Continue only if the customer agrees to talk.",
-  "If the customer asks for a discount or offer, call get_offer and say only what it returns. Never promise a discount.",
-  "Before booking a visit, offer one exact slot from check_slots and ask a yes/no question that names that slot. On a clear yes, call record_consent(site_visit, exact words) and then book_site_visit with that slot.",
-  "Before sending WhatsApp, ask a yes/no question. On a clear yes, call record_consent(whatsapp, exact words) and then send_brochure.",
-  "If the customer refuses one action (booking or WhatsApp), drop only that action and continue politely.",
-  "If the customer asks not to be called again, call mark_dnd and then end_call. Do not pitch anything.",
+  "Facts (prices, booking amounts, offers, unit availability, visit slots) are spoken only from function results by inserting the function's {{<function>.say}} text. Never estimate, round, compute or confirm a number the customer suggests.",
+  "Open by saying you are an AI assistant and that the call is recorded, and ask if that is okay. If the customer objects to recording or asks not to be called, follow rule 7.",
+  "If the customer asks for a discount or offer, call get_offer and speak only what it returns. Never promise a discount.",
+  "Before booking a visit, offer {{check_slots.first_slot}} by name in a yes/no question (\"Shall I book your site visit for <slot>?\"). On a clear yes, call record_consent(site_visit, exact words, question asked) and then book_site_visit(slot, consent_id, exact words).",
+  "Before sending WhatsApp, ask \"Shall I send the brochure to this WhatsApp number?\". On a clear yes, call record_consent(whatsapp, exact words, question asked) and then send_brochure(consent_id, exact words).",
+  "If the customer refuses one action, drop only that action and continue politely. If they withdraw after a booking, call cancel_booking.",
+  "If the customer asks not to be called again or refuses a recorded call, call mark_dnd and then end_call. Do not pitch anything.",
   "If the customer asks for a human or says they are ready to buy, call transfer_to_sales with a one-line summary.",
   "If the person is not the enquirer, apologise and end_call without pitching.",
-  "If the asked configuration is sold out or the customer wants a later call, offer schedule_callback.",
-  "Ask at most one question per turn, keep replies under 25 words, and reply in English unless the customer speaks Hindi or Hinglish.",
-  "Never say guaranteed, assured returns, best price, or lowest price. Say you are an AI if asked."
+  "If the asked configuration is sold out, or the customer wants a later call, offer schedule_callback.",
+  "If the customer's budget is below the starting price, acknowledge it once, mention a smaller configuration if one exists, and offer the sales team for payment plans (transfer_to_sales). Never invent EMI or loan figures.",
+  "Ask at most one question per turn and keep replies under 25 words. Reply in the customer's language: English to English, Hinglish to Hindi or Hinglish (use \"ji\" after the name).",
+  "Never say guaranteed, assured returns, best price, lowest price, or the word consent. Say you are an AI assistant if asked."
  ],
  "forbidden_claims": [
   "\\bguarantee(?:d)?\\b",
   "\\bassured returns?\\b",
   "\\bbest price\\b",
   "\\blowest price\\b",
-  "\\bpakka\\b"
+  "\\bpakka\\b",
+  "\\bconsent\\b"
  ],
  "claim_rules": [
   {
@@ -90,9 +96,11 @@
     "ask_availability": "pitch",
     "wrong_person": "close",
     "call_later": "close",
-    "opt_out": "close"
+    "opt_out": "close",
+    "refuse_recording": "close"
    },
-   "fallback": "Hi, this is Asha, an AI assistant from Greenleaf Residences. This call is recorded. Is this a good time?"
+   "fallback": "Hi {{customer_name}}, this is Asha, an AI assistant from Greenleaf Residences. This call is recorded; is that okay?",
+   "fallback_hi": "Namaste {{customer_name}} ji, main Asha, Greenleaf Residences ki AI assistant. Yeh call record ho rahi hai, kya yeh theek hai?"
   },
   {
    "name": "qualify",
@@ -111,7 +119,8 @@
     "ask_availability": "pitch",
     "not_interested": "close"
    },
-   "fallback": "Sure. Which configuration should I check for you?"
+   "fallback": "Sure. Which configuration should I check for you?",
+   "fallback_hi": "Ji, aapke liye kaunsa configuration check karoon?"
   },
   {
    "name": "pitch",
@@ -131,15 +140,17 @@
     "objection_price": "objection",
     "want_visit": "visit_booking",
     "want_brochure": "followup",
-    "sold_out": "close",
-    "opt_out": "close"
+    "sold_out": "objection",
+    "opt_out": "close",
+    "call_later": "close"
    },
-   "fallback": "{{get_price.say}} || {{check_units.say}} || Let me read that from our price sheet so it is exact."
+   "fallback": "{{get_price.say}} || {{check_units.say}} || Let me read that from our price sheet so it is exact.",
+   "fallback_hi": "{{get_price.say}} || {{check_units.say}} || Main price sheet se exact rate bata deti hoon."
   },
   {
    "name": "objection",
    "goal": "Handle price or trust objections without inventing offers",
-   "instructions": "Acknowledge. Call get_offer if discount is asked. If no offer, say so plainly and offer a site visit or brochure instead.",
+   "instructions": "Acknowledge the concern in one line. Discount asked: get_offer. Sold out: speak {{check_units.say}} and offer schedule_callback or another configuration. Budget below price: rule 11.",
    "allowed_actions": [
     "get_offer",
     "get_price",
@@ -153,9 +164,12 @@
    "transitions": {
     "want_visit": "visit_booking",
     "want_brochure": "followup",
-    "not_interested": "close"
+    "not_interested": "close",
+    "call_later": "close",
+    "opt_out": "close"
    },
-   "fallback": "I understand. I can only share offers that are live in our system. Would a site visit help you decide?"
+   "fallback": "I understand. I can only share offers that are live in our system. Would a site visit help you decide?",
+   "fallback_hi": "Samajh sakti hoon. Kya ek site visit se decide karna aasaan rahega?"
   },
   {
    "name": "visit_booking",
@@ -165,6 +179,7 @@
     "check_slots",
     "record_consent",
     "book_site_visit",
+    "cancel_booking",
     "end_call",
     "mark_dnd",
     "transfer_to_sales",
@@ -172,9 +187,11 @@
    ],
    "transitions": {
     "booked": "close",
-    "declines": "close"
+    "declines": "objection",
+    "revoke_consent": "close"
    },
-   "fallback": "Shall I book your site visit for {{check_slots.first_slot}}? || Which day and time should I check for your visit?"
+   "fallback": "Shall I book your site visit for {{check_slots.first_slot}}? || Which day and time should I check for your visit?",
+   "fallback_hi": "Kya main aapka site visit {{check_slots.first_slot}} ke liye book kar doon? || Visit ke liye kaunsa din aur time check karoon?"
   },
   {
    "name": "followup",
@@ -191,7 +208,8 @@
     "sent": "close",
     "declines": "close"
    },
-   "fallback": "Shall I send the brochure to this WhatsApp number?"
+   "fallback": "Shall I send the brochure to this WhatsApp number?",
+   "fallback_hi": "Kya main brochure isi WhatsApp number par bhej doon?"
   },
   {
    "name": "close",
@@ -202,11 +220,11 @@
     "transfer_to_sales",
     "mark_dnd",
     "schedule_callback",
-    "send_brochure",
-    "record_consent"
+    "cancel_booking"
    ],
    "transitions": {},
-   "fallback": "Thank you for your time. Have a good day."
+   "fallback": "Thank you for your time. Have a good day.",
+   "fallback_hi": "Aapke samay ke liye dhanyavaad. Aapka din shubh ho."
   }
  ],
  "variables": [
@@ -225,6 +243,34 @@
    "description": "Where the enquiry came from"
   },
   {
+   "name": "lead.phone",
+   "type": "string",
+   "source": "constant",
+   "required": true,
+   "description": "Number dialled (platform context)"
+  },
+  {
+   "name": "call_id",
+   "type": "string",
+   "source": "constant",
+   "required": true,
+   "description": "Platform call id"
+  },
+  {
+   "name": "agent_name",
+   "type": "string",
+   "source": "constant",
+   "required": true,
+   "description": "Asha"
+  },
+  {
+   "name": "project_name",
+   "type": "string",
+   "source": "constant",
+   "required": true,
+   "description": "Greenleaf Residences"
+  },
+  {
    "name": "lead.language",
    "type": "enum[en,hinglish,hi]",
    "source": "customer",
@@ -236,7 +282,7 @@
    "type": "enum[2bhk,3bhk,4bhk]",
    "source": "customer",
    "required": true,
-   "description": "Configuration asked"
+   "description": "Configuration asked (one of 2bhk, 3bhk, 4bhk)"
   },
   {
    "name": "lead.budget_inr",
@@ -301,25 +347,6 @@
    "description": "Backs every 'brochure sent' claim"
   },
   {
-   "name": "consent.site_visit",
-   "type": "verbatim_quote",
-   "source": "customer",
-   "required": true,
-   "validation": "affirmative, in last customer utterance, question named the slot, not revoked"
-  },
-  {
-   "name": "consent.whatsapp",
-   "type": "verbatim_quote",
-   "source": "customer",
-   "validation": "affirmative, in last customer utterance, not revoked"
-  },
-  {
-   "name": "consent.revoked_at",
-   "type": "turn_index",
-   "source": "customer",
-   "description": "Turn where the customer withdrew"
-  },
-  {
    "name": "mark_dnd.dnd",
    "type": "boolean",
    "source": "tool",
@@ -353,6 +380,53 @@
    "type": "integer",
    "source": "post_call",
    "description": "Turns blocked by the auditor (from the audit log)"
+  },
+  {
+   "name": "record_consent.consent_id",
+   "type": "string",
+   "source": "tool",
+   "description": "Issued only for a clear yes; required by book_site_visit / send_brochure"
+  },
+  {
+   "name": "record_consent.question",
+   "type": "text",
+   "source": "tool",
+   "description": "The exact yes/no question the yes answered"
+  },
+  {
+   "name": "record_consent.recorded_at",
+   "type": "iso_datetime",
+   "source": "tool"
+  },
+  {
+   "name": "book_site_visit.slot_iso",
+   "type": "iso_datetime",
+   "source": "tool"
+  },
+  {
+   "name": "cancel_booking.cancelled",
+   "type": "string",
+   "source": "tool",
+   "description": "Booking id cancelled after a withdrawal"
+  },
+  {
+   "name": "budget_gap",
+   "type": "boolean",
+   "source": "post_call",
+   "required": true,
+   "description": "Budget stated below get_price.price_from_inr"
+  },
+  {
+   "name": "objection_reason",
+   "type": "enum[price,location,timing,trust,none]",
+   "source": "post_call",
+   "required": true
+  },
+  {
+   "name": "call_language",
+   "type": "enum[en,hinglish,hi]",
+   "source": "post_call",
+   "required": true
   }
  ],
  "tools": [
@@ -361,7 +435,8 @@
    "kind": "lookup",
    "description": "Exact price-sheet line for a configuration",
    "params": {
-    "bhk": "2bhk|3bhk|4bhk"
+    "bhk": "2bhk|3bhk|4bhk",
+    "lang": "en|hi"
    },
    "sets": [
     "get_price.say",
@@ -376,7 +451,8 @@
    "kind": "lookup",
    "description": "Units left for a configuration",
    "params": {
-    "bhk": "2bhk|3bhk|4bhk"
+    "bhk": "2bhk|3bhk|4bhk",
+    "lang": "en|hi"
    },
    "sets": [
     "check_units.say",
@@ -389,7 +465,8 @@
    "kind": "lookup",
    "description": "Open site-visit slots for a day",
    "params": {
-    "day": "today|tomorrow|saturday|sunday|weekday"
+    "day": "today|tomorrow|saturday|sunday|weekday",
+    "lang": "en|hi"
    },
    "sets": [
     "check_slots.say",
@@ -401,7 +478,9 @@
    "name": "get_offer",
    "kind": "lookup",
    "description": "Live offer, if any",
-   "params": {},
+   "params": {
+    "lang": "en|hi"
+   },
    "sets": [
     "get_offer.say",
     "get_offer.offer"
@@ -413,27 +492,54 @@
    "description": "Record explicit consent with the customer's exact words",
    "params": {
     "purpose": "site_visit|whatsapp",
-    "customer_words": "verbatim"
-   }
+    "customer_words": "verbatim",
+    "question_asked": "the yes/no question just asked"
+   },
+   "sets": [
+    "record_consent.consent_id",
+    "record_consent.recorded_at",
+    "record_consent.question"
+   ]
   },
   {
    "name": "book_site_visit",
    "kind": "action",
-   "description": "Book an exact open slot (needs consent site_visit for a question naming the slot)",
+   "description": "Book an exact open slot; the function itself refuses without a matching consent_id",
    "params": {
-    "slot": "exact text of an open slot"
+    "slot": "exact label of an open slot",
+    "consent_id": "from record_consent",
+    "consent_quote": "customer's exact words",
+    "lang": "en|hi"
    },
    "sets": [
     "book_site_visit.say",
     "book_site_visit.booking_id",
-    "book_site_visit.slot"
+    "book_site_visit.slot",
+    "book_site_visit.slot_iso"
+   ]
+  },
+  {
+   "name": "cancel_booking",
+   "kind": "action",
+   "description": "Cancel a visit booked earlier in this call when the customer withdraws",
+   "params": {
+    "booking_id": "from book_site_visit",
+    "reason": "text",
+    "lang": "en|hi"
+   },
+   "sets": [
+    "cancel_booking.cancelled"
    ]
   },
   {
    "name": "send_brochure",
    "kind": "action",
-   "description": "Send brochure on WhatsApp (needs consent whatsapp)",
-   "params": {},
+   "description": "Send brochure on WhatsApp; the function itself refuses without a matching consent_id",
+   "params": {
+    "consent_id": "from record_consent",
+    "consent_quote": "customer's exact words",
+    "lang": "en|hi"
+   },
    "sets": [
     "send_brochure.say",
     "send_brochure.sent"
@@ -445,7 +551,8 @@
    "description": "Note a callback (call later / sold-out waitlist)",
    "params": {
     "when": "text",
-    "reason": "text"
+    "reason": "text",
+    "lang": "en|hi"
    },
    "sets": [
     "schedule_callback.say",
@@ -457,7 +564,8 @@
    "kind": "action",
    "description": "Add this number to the do-not-call list",
    "params": {
-    "reason": "text"
+    "reason": "text",
+    "lang": "en|hi"
    },
    "sets": [
     "mark_dnd.say",
@@ -469,7 +577,8 @@
    "kind": "action",
    "description": "Warm transfer to a human sales executive with a summary",
    "params": {
-    "summary": "text"
+    "summary": "text",
+    "lang": "en|hi"
    },
    "sets": [
     "transfer_to_sales.say"
@@ -497,7 +606,7 @@
   },
   {
    "name": "call_later",
-   "resolves_with": "end_call",
+   "resolves_with": "schedule_callback",
    "description": "asks to be called later"
   },
   {
@@ -532,12 +641,12 @@
   },
   {
    "name": "revoke_consent",
-   "resolves_with": "close",
+   "resolves_with": "cancel_booking (if booked) or drop the action",
    "description": "withdraws an earlier yes (cancel, don't book, changed my mind)"
   },
   {
    "name": "want_brochure",
-   "resolves_with": "send_brochure",
+   "resolves_with": "followup: record_consent(whatsapp) then send_brochure",
    "description": "asks for the brochure or details on WhatsApp"
   },
   {
@@ -562,12 +671,12 @@
   },
   {
    "name": "ask_if_bot",
-   "resolves_with": "say you are an AI assistant",
+   "resolves_with": "rule 13: say you are an AI assistant",
    "description": "asks if this is a bot or a real person"
   },
   {
    "name": "refuse_recording",
-   "resolves_with": "end_call",
+   "resolves_with": "mark_dnd then end_call",
    "description": "objects to the call being recorded"
   }
  ],
@@ -575,14 +684,16 @@
  "once_actions": {
   "book_site_visit": "book_site_visit.booking_id",
   "send_brochure": "send_brochure.sent",
-  "mark_dnd": "mark_dnd.dnd"
+  "mark_dnd": "mark_dnd.dnd",
+  "cancel_booking": "cancel_booking.cancelled"
  },
  "action_done_lines": {
   "book_site_visit": "{{book_site_visit.say}}",
   "send_brochure": "{{send_brochure.say}}",
   "mark_dnd": "{{mark_dnd.say}}",
   "transfer_to_sales": "{{transfer_to_sales.say}}",
-  "schedule_callback": "{{schedule_callback.say}}"
+  "schedule_callback": "{{schedule_callback.say}}",
+  "cancel_booking": "{{cancel_booking.say}}"
  },
  "max_questions_per_turn": 1,
  "mirror_language": true,
@@ -595,5 +706,9 @@
   "recording_disclosure": "opening line",
   "consent": "verbatim quote, last customer utterance, revocable",
   "reference": "TRAI TCCCPR 2025 amendment (secondary sources), DPDP Act 2023"
+ },
+ "consent_args": {
+  "book_site_visit": "site_visit",
+  "send_brochure": "whatsapp"
  }
 }

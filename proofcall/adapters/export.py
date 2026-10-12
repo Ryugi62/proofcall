@@ -61,100 +61,138 @@ def _fn(name: str, params: str, doc: str, body: str) -> str:
 
 
 def callkaro_functions(cfg: Dict[str, Any], catalog: Dict[str, Any]) -> Dict[str, str]:
-    """In-call function sources, one per config tool. Values are rendered here (`say`), so the model never has to
-    produce a number. The test harness executes exactly these sources (adapters/function_tools.py)."""
+    """In-call function sources, one per config tool. Values are rendered here (`say`, English or Hinglish), so the
+    model never has to produce a number. Consent is enforced inside the action functions: book_site_visit and
+    send_brochure refuse without a consent_id that matches the customer's affirmative quote.
+    The test harness executes exactly these sources (adapters/function_tools.py)."""
     cat = json.dumps(catalog, ensure_ascii=False)
     aff, neg = consent_rules.AFFIRMATIVE.pattern, consent_rules.NEGATIVE.pattern
-    ctx = '    ctx = globals().get("x_context") or {}\n'
+    ctx = '    ctx = globals().get("x_context") or {}  # runtime-injected call context (phone, time)\n'
+    check = f"""    import hashlib, re
+    affirmative = re.compile(r\"\"\"{aff}\"\"\", re.I)
+    negative = re.compile(r\"\"\"{neg}\"\"\", re.I)
+
+    def consent_ok(purpose, consent_id, quote):
+        q = quote or ""
+        expected = "CN-" + hashlib.sha1((purpose + "|" + q).encode()).hexdigest()[:6].upper()
+        return consent_id == expected and bool(affirmative.search(q)) and not negative.search(q)
+"""
+    hi = '(lang or "en").lower().startswith("hi")'
     src = {
-        "get_price": _fn("get_price", "bhk: str", """
-Exact price-sheet line for a configuration (2bhk, 3bhk or 4bhk).
-Use whenever the customer asks about price, cost, rate or booking amount. Say the returned `say` text.""", f'''    catalog = {cat}
+        "get_price": _fn("get_price", 'bhk: str, lang: str = "en"', """
+Exact price-sheet line for a configuration (2bhk, 3bhk or 4bhk). lang = "en" or "hi" (Hinglish).
+Use whenever the customer asks about price, cost, rate or booking amount. Speak the returned `say` text.""", f"""    catalog = {cat}
     key = (bhk or "").lower().replace(" ", "")
     p = catalog["prices"].get(key)
     if not p:
-        return {{"ok": False, "say": "We have " + ", ".join(k.upper() for k in catalog["prices"]) + " homes. Which one should I check?"}}
+        return {{"ok": False, "say": "Kaunsa configuration check karoon?" if {hi} else "Which configuration should I check?"}}
+    if {hi}:
+        say = f"{{key.upper()}} {{p['from']}} se shuru hota hai, GST aur stamp duty alag, booking amount {{p['booking_amount']}}."
+    else:
+        say = f"The {{key.upper()}} starts at {{p['from']}}, {{catalog['price_note']}}, with a booking amount of {{p['booking_amount']}}."
     return {{"ok": True, "bhk": key, "price_from": p["from"], "price_from_inr": p["from_inr"],
-            "booking_amount": p["booking_amount"], "booking_amount_inr": p["booking_amount_inr"],
-            "say": f"The {{key.upper()}} starts at {{p['from']}}, {{catalog['price_note']}}, with a booking amount of {{p['booking_amount']}}."}}
-'''),
-        "check_units": _fn("check_units", "bhk: str", """
-Units left for a configuration. Use before saying anything is available or sold out. Say the returned `say` text.""", f'''    catalog = {cat}
+            "booking_amount": p["booking_amount"], "booking_amount_inr": p["booking_amount_inr"], "say": say}}
+"""),
+        "check_units": _fn("check_units", 'bhk: str, lang: str = "en"', """
+Units left for a configuration. Use before saying anything is available or sold out. Speak the returned `say` text.""", f"""    catalog = {cat}
     key = (bhk or "").lower().replace(" ", "")
     if key not in catalog["units"]:
-        return {{"ok": False, "say": "Which configuration should I check?"}}
+        return {{"ok": False, "say": "Kaunsa configuration check karoon?" if {hi} else "Which configuration should I check?"}}
     n = catalog["units"][key]
-    say = (f"Yes, {{key.upper()}} homes are available right now." if n > 0
-           else f"The {{key.upper()}} homes are fully sold out right now. I can note your interest and call you if one opens up.")
+    if {hi}:
+        say = (f"Haan, {{key.upper()}} abhi available hai." if n > 0 else
+               f"{{key.upper()}} abhi poora sold out hai. Koi unit khulte hi main aapko call karwa sakti hoon.")
+    else:
+        say = (f"Yes, {{key.upper()}} homes are available right now." if n > 0 else
+               f"The {{key.upper()}} homes are fully sold out right now. I can arrange a call if one opens up.")
     return {{"ok": True, "bhk": key, "units_left": n, "available": n > 0, "say": say}}
-'''),
-        "check_slots": _fn("check_slots", "day: str", """
+"""),
+        "check_slots": _fn("check_slots", 'day: str, lang: str = "en"', """
 Open site-visit slots for a day (today, tomorrow, saturday, sunday, weekday).
-Use before offering or confirming any visit time. Offer one slot at a time by its exact text.""", f'''    catalog = {cat}
+Use before offering or confirming any visit time. Offer first_slot by its exact label.""", f"""    catalog = {cat}
     d = (day or "").lower()
     slots = catalog["slots"].get(d)
     if slots is None:
-        return {{"ok": False, "slots": [], "say": "Which day suits you, tomorrow or the weekend?"}}
+        return {{"ok": False, "slots": "", "first_slot": "",
+                "say": "Kaunsa din theek rahega, kal ya weekend?" if {hi} else "Which day suits you, tomorrow or the weekend?"}}
     if not slots:
-        return {{"ok": True, "slots": [], "first_slot": "", "say": f"There are no open slots {{d}}. Shall I check tomorrow?"}}
-    return {{"ok": True, "slots": slots, "first_slot": slots[0], "say": f"The earliest open slot is {{slots[0]}}."}}
-'''),
-        "get_offer": _fn("get_offer", "", """
+        return {{"ok": True, "slots": "", "first_slot": "",
+                "say": f"{{d}} koi slot khali nahi hai. Kal check karoon?" if {hi} else f"There are no open slots {{d}}. Shall I check tomorrow?"}}
+    first = slots[0]
+    return {{"ok": True, "slots": ", ".join(s["label"] for s in slots), "first_slot": first["label"], "first_slot_iso": first["iso"],
+            "say": f"Sabse pehla khali slot {{first['label']}} hai." if {hi} else f"The earliest open slot is {{first['label']}}."}}
+"""),
+        "get_offer": _fn("get_offer", 'lang: str = "en"', """
 Live offer, if any. Use whenever the customer asks for a discount, offer, waiver or cashback.
-Never promise anything that is not returned here.""", f'''    catalog = {cat}
+Never promise anything that is not returned here.""", f"""    catalog = {cat}
     offer = catalog.get("offer") or "none"
     if offer == "none":
-        return {{"ok": True, "offer": "none", "say": "There is no offer running right now; the price-sheet price applies."}}
-    return {{"ok": True, "offer": offer, "say": f"The current offer is {{offer}}."}}
-'''),
-        "record_consent": _fn("record_consent", "purpose: str, customer_words: str", """
-Record explicit consent before booking a site visit (purpose=site_visit) or sending WhatsApp (purpose=whatsapp).
-Pass the customer's exact words. Proceed with the action only if accepted is true.""", ctx + f'''    import re
-    affirmative = re.compile(r"""{aff}""", re.I)
-    negative = re.compile(r"""{neg}""", re.I)
-    words = customer_words or ""
-    if not affirmative.search(words) or negative.search(words):
-        return {{"ok": True, "accepted": False, "reason": "not a clear yes",
-                "say": "No problem, I won't do that."}}
-    return {{"ok": True, "accepted": True, "purpose": purpose, "quote": words, "recorded_at": ctx.get("current_time", "")}}
-'''),
-        "book_site_visit": _fn("book_site_visit", "slot: str", """
-Book a site visit for an exact open slot, only after record_consent(site_visit) returned accepted=true
-for a question that named this slot.""", f'''    import hashlib
-    catalog = {cat}
-    open_slots = [s for v in catalog["slots"].values() for s in v]
-    if slot not in open_slots:
-        return {{"ok": False, "say": "That time is not open. Let me check the open slots again."}}
-    ref = "GL-" + hashlib.sha1(slot.encode()).hexdigest()[:6].upper()
-    return {{"ok": True, "booking_id": ref, "slot": slot,
-            "say": f"Done. Your site visit is booked for {{slot}}. Your reference is {{ref}}."}}
-'''),
-        "send_brochure": _fn("send_brochure", "", """
-Send the project brochure on WhatsApp to this number, only after record_consent(whatsapp) accepted.""",
-            '''    return {"ok": True, "sent": True, "say": "Done, the brochure is on its way to this WhatsApp number."}
-'''),
-        "schedule_callback": _fn("schedule_callback", "when: str, reason: str", """
-Note a callback when the customer asks to be called later or wants to hear when a sold-out unit opens up.""",
-            '''    return {"ok": True, "when": when, "reason": reason, "say": "Noted, we will call you back " + (when or "soon") + "."}
-'''),
-        "mark_dnd": _fn("mark_dnd", "reason: str", """
+        return {{"ok": True, "offer": "none",
+                "say": "Abhi koi offer nahi chal raha, price sheet wala rate hi lagega." if {hi} else "There is no offer running right now; the price-sheet price applies."}}
+    return {{"ok": True, "offer": offer, "say": f"Current offer: {{offer}}."}}
+"""),
+        "record_consent": _fn("record_consent", "purpose: str, customer_words: str, question_asked: str", """
+Record explicit consent right after the customer answers a yes/no question that named the action
+(purpose = site_visit or whatsapp). Pass the question you asked and the customer's exact words.
+Returns consent_id only for a clear yes; pass consent_id and customer_words to the action function.""", ctx + check + """    if not affirmative.search(customer_words or "") or negative.search(customer_words or ""):
+        return {"ok": True, "accepted": False, "reason": "not a clear yes", "say": "No problem, I won't do that."}
+    cid = "CN-" + hashlib.sha1((purpose + "|" + customer_words).encode()).hexdigest()[:6].upper()
+    return {"ok": True, "accepted": True, "consent_id": cid, "purpose": purpose, "quote": customer_words,
+            "question": question_asked, "recorded_at": ctx.get("current_time", "")}
+"""),
+        "book_site_visit": _fn("book_site_visit", 'slot: str, consent_id: str, consent_quote: str, lang: str = "en"', """
+Book a site visit for an exact open slot label. Refuses unless consent_id matches the customer's yes
+(from record_consent, purpose site_visit).""", ctx + check + f"""    catalog = {cat}
+    if not consent_ok("site_visit", consent_id, consent_quote):
+        return {{"ok": False, "reason": "no valid consent", "say": "Pehle confirm kar loon, visit book karoon?" if {hi} else "Before I book, may I confirm you want the visit?"}}
+    match = [s for v in catalog["slots"].values() for s in v if s["label"] == slot]
+    if not match:
+        return {{"ok": False, "reason": "slot not open", "say": "Yeh time khali nahi hai, main dobara check karti hoon." if {hi} else "That time is not open. Let me check the open slots again."}}
+    seed = slot + ctx.get("user_phone_number", "") + ctx.get("current_time", "")
+    ref = "GL-" + str(int(hashlib.sha1(seed.encode()).hexdigest(), 16) % 9000 + 1000)
+    say = (f"Ho gaya, aapka site visit {{slot}} ke liye book hai. Reference {{ref}} WhatsApp par bhi aa jayega." if {hi}
+           else f"Done. Your site visit is booked for {{slot}}. Your reference {{ref}} will also come on WhatsApp.")
+    return {{"ok": True, "booking_id": ref, "slot": slot, "slot_iso": match[0]["iso"], "say": say}}
+"""),
+        "cancel_booking": _fn("cancel_booking", 'booking_id: str, reason: str, lang: str = "en"', """
+Cancel a site visit booked earlier in this call when the customer withdraws.""", f"""    if not (booking_id or "").startswith("GL-"):
+        return {{"ok": False, "say": "There is no booking to cancel."}}
+    return {{"ok": True, "cancelled": booking_id, "reason": reason,
+            "say": "Theek hai, visit cancel kar diya." if {hi} else "Okay, I have cancelled that visit."}}
+"""),
+        "send_brochure": _fn("send_brochure", 'consent_id: str, consent_quote: str, lang: str = "en"', """
+Send the project brochure on WhatsApp to the number on this call. Refuses unless consent_id matches the
+customer's yes (record_consent, purpose whatsapp).""", ctx + check + f"""    if not consent_ok("whatsapp", consent_id, consent_quote):
+        return {{"ok": False, "reason": "no valid consent", "say": "Kya main brochure WhatsApp par bhej doon?" if {hi} else "Shall I send the brochure to this WhatsApp number?"}}
+    return {{"ok": True, "sent": True, "to": ctx.get("user_phone_number", ""),
+            "say": "Ho gaya, brochure aapke WhatsApp par aa raha hai." if {hi} else "Done, the brochure is on its way to this WhatsApp number."}}
+"""),
+        "schedule_callback": _fn("schedule_callback", 'when: str, reason: str, lang: str = "en"', """
+Note a callback when the customer asks to be called later or wants a call when a sold-out unit opens up.""",
+            f"""    return {{"ok": True, "when": when, "reason": reason,
+            "say": ("Theek hai, hum aapko " + (when or "jaldi") + " call karenge.") if {hi} else ("Noted, we will call you back " + (when or "soon") + ".")}}
+"""),
+        "mark_dnd": _fn("mark_dnd", 'reason: str, lang: str = "en"', """
 The customer asked not to be called again. Add this number to the do-not-call list, then end the call.""",
-            ctx + '''    return {"ok": True, "dnd": True, "number": ctx.get("user_phone_number", ""), "reason": reason,
-            "say": "Understood. We will not call you again. Sorry for the trouble."}
-'''),
-        "transfer_to_sales": _fn("transfer_to_sales", "summary: str", """
+            ctx + f"""    return {{"ok": True, "dnd": True, "number": ctx.get("user_phone_number", ""), "reason": reason,
+            "say": "Samajh gayi, hum aapko dobara call nahi karenge. Maaf kijiye." if {hi} else "Understood. We will not call you again. Sorry for the trouble."}}
+"""),
+        "transfer_to_sales": _fn("transfer_to_sales", 'summary: str, lang: str = "en"', """
 Warm transfer to a human sales executive (maps to the platform transfer_call, warm mode) with a one-line summary.""",
-            '''    return {"ok": True, "summary": summary, "say": "I'm connecting you to our sales manager now. Please hold."}
-'''),
+            f"""    return {{"ok": True, "summary": summary,
+            "say": "Main aapko abhi sales manager se connect karti hoon, ek moment." if {hi} else "I'm connecting you to our sales manager now, one moment."}}
+"""),
         "end_call": _fn("end_call", "reason: str", """
 End the call (maps to the platform end_call) once the outcome is clear or the customer wants to stop.""",
-            '''    return {"ok": True, "reason": reason}
-'''),
+            """    return {"ok": True, "reason": reason}
+"""),
     }
     names = [t_["name"] for t_ in cfg.get("tools", [])]
     return {f"{n}.py": src[n] for n in names if n in src}
 
 
+EXPRESSIONS = {"booked": "(book_site_visit_ok == True)", "sent": "(send_brochure_ok == True)",
+               "sold_out": "(check_units_available == False)"}
 CK_TYPE = {"integer": "Number", "integer_inr": "Number", "boolean": "Boolean", "turn_index": "Number"}
 GLOBAL_JUMPS = {
     "opt_out": "Whenever the customer asks not to be called again or to remove their number.",
@@ -179,6 +217,9 @@ def callkaro_pathway(cfg: Dict[str, Any]) -> str:
                 "- Message While Switching: Dynamic — one short connecting line, no facts",
                 f"- Fallback line (when the auditor blocks a draft): {s.get('fallback', '')}"]
         for cond, target in s.get("transitions", {}).items():
+            if cond in EXPRESSIONS:
+                out.append(f"- Condition (Expression): `{EXPRESSIONS[cond]}` → `{target}`")
+                continue
             desc = intents.get(cond, {}).get("description") or cond.replace("_", " ")
             out.append(f"- Condition (Prompt): \"The customer {desc}.\" → `{target}`")
         out.append("")

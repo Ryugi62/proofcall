@@ -40,7 +40,7 @@ def test_generated_get_price_renders_catalog_values():
 def test_generated_record_consent_matches_domain():
     f = _load(callkaro_functions(CFG, CAT)["record_consent.py"], "record_consent.py")
     for words in ["Haan ji, kar dijiye", "yes please book it", "no, don't book", "hmm maybe", "ok whatever... actually no"]:
-        r = asyncio.get_event_loop().run_until_complete(f("site_visit", words))
+        r = asyncio.get_event_loop().run_until_complete(f("site_visit", words, "Shall I book Saturday 10:30 AM?"))
         assert r["accepted"] == is_affirmative(words), words
 
 
@@ -55,8 +55,16 @@ def test_function_tools_execute_exported_sources():
     ft = FunctionTools(CFG, CAT)
     r = ft.call("check_units", {"bhk": "4BHK"})
     assert r["check_units.available"] is False and "sold out" in r["check_units.say"]
-    r = ft.call("book_site_visit", {"slot": "Saturday morning"})
+    c = ft.call("record_consent", {"purpose": "site_visit", "customer_words": "Yes, book it", "question_asked": "q"})
+    cid = c["record_consent.consent_id"]
+    r = ft.call("book_site_visit", {"slot": "Saturday 10:30 AM", "consent_id": "", "consent_quote": "Yes, book it"})
+    assert r["book_site_visit.ok"] is False and r["book_site_visit.reason"] == "no valid consent"
+    r = ft.call("book_site_visit", {"slot": "Saturday morning", "consent_id": cid, "consent_quote": "Yes, book it"})
     assert r["book_site_visit.ok"] is False and "book_site_visit.booking_id" not in r
-    r = ft.call("book_site_visit", {"slot": "Saturday 10:30 AM"})
-    assert r["book_site_visit.booking_id"].startswith("GL-")
+    r = ft.call("book_site_visit", {"slot": "Saturday 10:30 AM", "consent_id": cid, "consent_quote": "Yes, book it"})
+    assert r["book_site_visit.booking_id"].startswith("GL-") and r["book_site_visit.slot_iso"].startswith("2026-10-17")
+    wa = ft.call("send_brochure", {"consent_id": cid, "consent_quote": "Yes, book it"})
+    assert wa["send_brochure.ok"] is False          # a site-visit consent cannot be reused for WhatsApp
+    assert "sold out" in ft.call("check_units", {"bhk": "4bhk"})["message"]
+    assert "sold out" in ft.call("check_units", {"bhk": "4bhk", "lang": "hi"})["message"]
     assert set(ft.sources) == {t["name"] + ".py" for t in CFG["tools"]}

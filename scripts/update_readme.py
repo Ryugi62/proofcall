@@ -20,10 +20,16 @@ def block(results_paths):
                   "| mode | calls | agent turns | violations | turns with a violation (95% CI) | blocked before speaking | outcome match | task success (95% CI) | median / p90 model ms | median audit ms |",
                   "|---|---|---|---|---|---|---|---|---|---|"]
         for mode, m in s.items():
+            if mode == "comparison":
+                continue
             lines.append(f"| {mode} | {m['calls']} | {m['agent_turns']} | {m['violations']} | "
                          f"{m['turns_with_violation']} {m['turn_violation_ci95']} | {m['blocked_turns']} | "
                          f"{m['outcome_match']}/{m['calls']} | {m['task_success']}/{m['calls']} {m['task_success_ci95']} | "
                          f"{m['median_model_ms']} / {m['p90_model_ms']} | {m['median_audit_ms']} |")
+        if "comparison" in s:
+            c = s["comparison"]
+            lines.append(f"\nCalls with ≥1 violation, baseline vs guarded: Fisher exact p = {c['calls_with_violation_fisher_p']} "
+                         f"(call level). Task success: p = {c['task_success_fisher_p']}.")
         lines.append("")
     return "\n".join(lines)
 

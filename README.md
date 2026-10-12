@@ -21,7 +21,7 @@ Built for *The Golden Hour — A Voice AI Hackathon* (E-Cell IIT Kharagpur × Ca
 |---|---|
 | Architecture & Prompt Engineering | `configs/*.json` states (node per stage, allowed functions, conditions, fallback); `export/prompt.md` numbered non-contradicting rules |
 | Data Schema & Variable Design | `export/variables.md`. Every variable has a type and a source (`tool`, `customer`, `constant`, `post_call`). Price, availability and offer values are `tool` only |
-| Actions, Tool Calling & Intent Resolution | 17 intents, 11 functions; `export/callkaro_functions/*.py` (`@tool async def`, values rendered inside the function). **The test harness executes these exact function files**, so what was tested is what is exported |
+| Actions, Tool Calling & Intent Resolution | 17 intents, 12 functions; `export/callkaro_functions/*.py` (`@tool async def`, values rendered inside the function). **The test harness executes these exact function files**, so what was tested is what is exported |
 | Testing Rigour & Edge-Case Handling | `scenarios/*.yaml`: 19 self-designed scenarios, 14 edge cases. `runs/*/report.md` compares guarded and prompt-only baseline with the same auditor, with 95% Wilson intervals. The auditor itself is measured in `eval/auditor_eval.md` (development set plus an independently labelled set) |
 | Call Quality, Latency & Naturalness | Replies ≤ 25 words, Hinglish mirroring, latency per turn in every report |
 
@@ -42,6 +42,10 @@ customer turn ─► agent model (JSON: intent, action, say-with-slots, next_sta
 
 Violation codes: `PRICE_UNSOURCED`, `NUMBER_UNSOURCED`, `AVAILABILITY_UNVERIFIED`, `BOOKING_UNBACKED`, `BROCHURE_UNBACKED`, `OFFER_UNVERIFIED`, `FORBIDDEN_CLAIM`, `DISCLOSURE_MISSING`, `MULTI_QUESTION`, `LANGUAGE_MISMATCH`, `SLOT_NOT_NAMED`, `ACTION_NOT_ALLOWED`, `ACTION_WITHOUT_CONSENT`, `DUPLICATE_ACTION`, `SLOT_UNFILLED`.
 
+**Consent is enforced inside the exported functions too**: `record_consent` issues a `consent_id` only for a clear yes, and `book_site_visit` / `send_brochure` return `ok: false` unless that id matches the customer's quote for the right purpose (a site-visit yes cannot be reused for WhatsApp). So the gate holds on the platform even without this harness.
+
+Every function speaks English or Hinglish (`lang`), and the call locks to Hinglish once the customer speaks Hindi.
+
 When a draft is blocked, the agent gets one repair attempt with the auditor's reasons. If the repair is also blocked, it speaks the node's fallback. Fallbacks are slot-aware (`Shall I book your site visit for {{check_slots.first_slot}}?`).
 
 **Violation rate** = guardrail violations in spoken agent turns ÷ agent turns. The same deterministic auditor is used for both modes.
@@ -55,6 +59,8 @@ When a draft is blocked, the agent gets one repair attempt with the auditor's re
 |---|---|---|---|---|---|---|---|---|---|
 | baseline | 6 | 35 | 2 | 2 [0.0158, 0.1861] | 0 | 4/6 | 4/6 [0.3, 0.9032] | 1292 / 3589 | 0.113 |
 | guarded | 6 | 33 | 0 | 0 [0.0, 0.1043] | 1 | 6/6 | 6/6 [0.6097, 1.0] | 1283 / 3277 | 0.152 |
+
+Calls with ≥1 violation, baseline vs guarded: Fisher exact p = 1.0 (call level). Task success: p = 0.4545.
 
 <!-- RESULTS:END -->
 

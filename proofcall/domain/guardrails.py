@@ -215,6 +215,8 @@ def audit_turn(config: AgentConfig, state_name: str, spoken: str, action: Option
     if config.raw.get("mirror_language") and customer_texts and text:
         if not any(is_hindi(c, lenient=True) for c in customer_texts) and is_hindi(text):
             vs.append(Violation("LANGUAGE_MISMATCH", "customer has spoken only English; agent replied in Hindi/Hinglish"))
+        elif is_hindi(customer_texts[-1]) and not is_hindi(text, lenient=True) and len(text.split()) >= 4:
+            vs.append(Violation("LANGUAGE_MISMATCH", "customer spoke Hindi; agent replied in English"))
 
     if action and action.get("name"):
         name = action["name"]
